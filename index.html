@@ -75,9 +75,15 @@
         </aside>
 
         <!-- Main Content Area -->
-        <main id="main-content" class="flex-1 overflow-y-auto bg-[#111] p-4 md:p-8 lg:p-12 pb-12 scroll-smooth">
+        <main id="main-content" class="flex-1 overflow-y-auto bg-[#111] p-4 md:p-8 lg:p-12 pb-20 scroll-smooth">
             <!-- Content gets injected here -->
         </main>
+    </div>
+
+    <!-- Fixed Bottom Banner -->
+    <div class="fixed bottom-0 left-0 right-0 bg-amber-500 text-neutral-950 text-center py-2 px-4 text-xs md:text-sm font-bold uppercase tracking-widest z-50 shadow-2xl flex items-center justify-center gap-2 border-t border-amber-400">
+        <i class="fas fa-tools text-sm"></i>
+        <span>Website under development</span>
     </div>
 
     <!-- Application Logic -->
@@ -85,8 +91,8 @@
         const topNavLinksConfig = [
             { type: 'protected', label: 'Class Schedule', icon: 'fa-lock', target: 'schedule' },
             { type: 'protected', label: 'Curriculum', icon: 'fa-lock', target: 'curriculum' },
-            { type: 'link', label: 'Zen Martial Arts', icon: 'fa-external-link-alt', url: 'https://www.zmainw.com/history/zen-martial-arts-history' },
-            { type: 'link', label: 'Self Defense', icon: 'fa-external-link-alt', url: 'https://www.zmainw.com/information/self-defense-de-escalation' },
+            { type: 'link', label: 'Zen Martial Arts', icon: 'fa-external-link-alt', url: 'https://www.zmaseattle.com/history/zen-martial-arts-history' },
+            { type: 'link', label: 'Self Defense', icon: 'fa-external-link-alt', url: 'https://www.zmaseattle.com/information/self-defense-de-escalation' },
             { type: 'link', label: 'JFANW', icon: 'fa-external-link-alt', url: 'https://www.jfanw.com/' }
         ];
 
@@ -425,7 +431,7 @@
                 if (target === 'schedule') {
                     window.open("https://docs.google.com/spreadsheets/d/1kNjWglka89LPcv4jOI7HbiCQx-44d2d0cTLTgMZAZQY/edit?usp=drive_link", "_blank");
                 } else if (target === 'curriculum') {
-                    window.open("https://www.zmainw.com/curriculum", "_blank");
+                    window.open("https://www.zmaseattle.com/information/curriculum", "_blank");
                 }
             } else if (passwordAttempt !== null) {
                 alert("Incorrect password. Access denied.");
