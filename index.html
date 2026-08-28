@@ -101,8 +101,7 @@
             { type: 'protected', label: 'Class Schedule', icon: 'fa-lock', target: 'schedule' },
             { type: 'protected', label: 'Curriculum', icon: 'fa-lock', target: 'curriculum' },
             { type: 'link', label: 'Zen Martial Arts', icon: 'fa-external-link-alt', url: 'https://www.zen-martial-arts.org/' },
-            { type: 'link', label: 'Self Defense', icon: 'fa-external-link-alt', url: 'https://www.selfdefensenw.com/' },
-            { type: 'link', label: 'JFANW', icon: 'fa-external-link-alt', url: 'https://www.jfanw.com/' }
+            { type: 'link', label: 'Self Defense', icon: 'fa-external-link-alt', url: 'https://www.selfdefensenw.com/' }
         ];
 
         const views = {
@@ -427,7 +426,7 @@
                 if (target === 'schedule') {
                     window.open("https://docs.google.com/spreadsheets/d/1kNjWglka89LPcv4jOI7HbiCQx-44d2d0cTLTgMZAZQY/edit?usp=drive_link", "_blank");
                 } else if (target === 'curriculum') {
-                    window.open("https://www.zmaseattle.com/information/curriculum", "_blank");
+                    window.location.href = "curriculum.html";
                 }
             } else if (passwordAttempt !== null) {
                 alert("Incorrect password. Access denied.");
