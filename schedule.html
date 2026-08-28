@@ -28,9 +28,15 @@
     <main class="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 pb-20 scroll-smooth fade-in">
         <div class="max-w-4xl mx-auto">
             
-            <div class="border-b border-neutral-800 pb-4 mb-8">
+            <div class="border-b border-neutral-800 pb-4 mb-6">
                 <h1 class="text-3xl sm:text-4xl font-bold text-white uppercase tracking-wide">Upcoming Classes</h1>
-                <p class="text-neutral-400 text-xs sm:text-sm mt-1">Showing upcoming classes for the next 3 months. Click any class to view detailed notes.</p>
+                <p class="text-neutral-400 text-xs sm:text-sm mt-1">Showing upcoming classes. Click any class to view detailed notes.</p>
+            </div>
+
+            <!-- Day of Week Filter Bar -->
+            <div id="filter-container" class="flex flex-wrap items-center gap-2 mb-6 hidden">
+                <span class="text-xs font-semibold uppercase tracking-wider text-neutral-400 mr-1"><i class="fas fa-filter mr-1.5"></i>Filter Day:</span>
+                <div id="day-buttons" class="flex flex-wrap gap-2"></div>
             </div>
 
             <!-- Schedule Container -->
@@ -45,6 +51,13 @@
     </main>
 
     <script>
+        let allUpcomingClasses = [];
+        let selectedDayFilter = 'ALL';
+
+        const DAYS_OF_WEEK = [
+            'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
+        ];
+
         function getAuthCookie(name) {
             const value = `; ${document.cookie}`;
             const parts = value.split(`; ${name}=`);
@@ -66,9 +79,8 @@
 
         const SHEET_ID = '1kNjWglka89LPcv4jOI7HbiCQx-44d2d0cTLTgMZAZQY';
 
-        // Fetch sheet data using JSONP to bypass CORS on local file:// or static hosting
         function fetchSheetDataJSONP(tabName) {
-            return new Promise((resolve, reject) => {
+            return new Promise((resolve) => {
                 const callbackName = 'gvizCallback_' + Math.random().toString(36).substring(2, 9);
                 const script = document.createElement('script');
                 
@@ -86,14 +98,13 @@
                 script.onerror = function() {
                     delete window[callbackName];
                     if (script.parentNode) document.body.removeChild(script);
-                    resolve([]); // Graceful resolve to allow multi-year tab fallback
+                    resolve([]);
                 };
 
                 document.body.appendChild(script);
             });
         }
 
-        // Parses date strings like "8/29/2026 (Saturday)", "Date(2026,7,29)", or "9/1/2026"
         function parseRowDate(rawVal) {
             if (!rawVal) return null;
             
@@ -109,14 +120,56 @@
             return isNaN(parsed.getTime()) ? null : parsed;
         }
 
+        function getTopicBadgeStyle(topic) {
+            const norm = (topic || '').trim().toLowerCase();
+            
+            // Royal Blue: Judo & Jujitsu, Wing Chun, Forms, Strikes & Kicks, Sticks & Weapons
+            if (['judo & jujitsu', 'wing chun', 'forms', 'strikes & kicks', 'sticks & weapons'].includes(norm)) {
+                return 'bg-[#0052cc] text-white border-[#004099] font-medium';
+            }
+            
+            // Forest Green: Sparring, Grappling, Sparring & Grappling, Weapons Sparring
+            if (['sparring', 'grappling', 'sparring & grappling', 'weapons sparring'].includes(norm)) {
+                return 'bg-[#00703c] text-white border-[#00552d] font-medium';
+            }
+
+            // Warm Brown: Open Practice, Test Preparation
+            if (['open practice', 'test preparation'].includes(norm)) {
+                return 'bg-[#533924] text-[#ffdcb3] border-[#3f2b1b] font-medium';
+            }
+
+            // Bright Crimson: Belt Test
+            if (norm === 'belt test') {
+                return 'bg-[#b30006] text-white border-[#8a0005] font-semibold';
+            }
+
+            // Deep Purple: Drills Night, Weapons Night, Night of a Thousand Kicks
+            if (['drills night', 'weapons night', 'night of a thousand kicks'].includes(norm)) {
+                return 'bg-[#5c2d82] text-white border-[#472265] font-medium';
+            }
+
+            // Dark Charcoal: Seminar, Black Belt Test
+            if (['seminar', 'black belt test'].includes(norm)) {
+                return 'bg-[#333333] text-white border-[#222222] font-medium';
+            }
+
+            // Muted Gray: No Class
+            if (norm === 'no class') {
+                return 'bg-[#6b7280] text-white border-[#4b5563] font-medium';
+            }
+
+            // Deep Teal: Other, To Be Determined
+            if (['other', 'to be determined'].includes(norm)) {
+                return 'bg-[#1b5e6b] text-white border-[#13444e] font-medium';
+            }
+
+            return 'bg-neutral-800 text-neutral-300 border-neutral-700';
+        }
+
         async function loadUpcomingSchedule() {
             const container = document.getElementById('schedule-container');
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            
-            // Calculate end date for the 3-month window
-            const threeMonthsAhead = new Date(today);
-            threeMonthsAhead.setMonth(threeMonthsAhead.getMonth() + 3);
 
             const currentYear = today.getFullYear();
             const currentTab = `${currentYear} Classes`;
@@ -125,7 +178,6 @@
             try {
                 let rows = await fetchSheetDataJSONP(currentTab);
 
-                // Fetch next year's tab if near end-of-year or if tab returned minimal rows
                 if (today.getMonth() >= 9 || rows.length === 0) {
                     const nextYearRows = await fetchSheetDataJSONP(nextTab);
                     rows = rows.concat(nextYearRows);
@@ -139,7 +191,6 @@
                     return;
                 }
 
-                // Parse and map rows
                 const parsedClasses = [];
 
                 rows.forEach((row, idx) => {
@@ -148,37 +199,35 @@
                     const topicVal = row.c && row.c[2] ? (row.c[2].f || row.c[2].v || '') : '';
                     const notesVal = row.c && row.c[3] ? (row.c[3].f || row.c[3].v || '') : '';
 
-                    if (!dateRaw && !topicVal) return;
+                    // Exclude rows without any content in "Class Topic"
+                    if (!topicVal || !topicVal.toString().trim()) return;
 
                     const dateObj = parseRowDate(dateRaw);
+                    const dayName = dateObj ? DAYS_OF_WEEK[dateObj.getDay()] : null;
 
                     parsedClasses.push({
                         id: `class-${idx}`,
                         dateStr: dateRaw,
                         dateObj: dateObj,
+                        dayOfWeek: dayName,
                         time: timeVal,
-                        topic: topicVal,
+                        topic: topicVal.toString().trim(),
                         notes: notesVal
                     });
                 });
 
-                // Filter for upcoming dates within the 3-month window
-                let upcoming = parsedClasses.filter(c => c.dateObj && c.dateObj >= today && c.dateObj <= threeMonthsAhead);
+                // Future classes only
+                let upcoming = parsedClasses.filter(c => c.dateObj && c.dateObj >= today);
 
-                // Fallback: If 3-month filter has fewer results, display all remaining future classes
-                if (upcoming.length === 0) {
-                    upcoming = parsedClasses.filter(c => c.dateObj && c.dateObj >= today);
-                }
-
-                // If still empty (e.g. unparsed dates), display all rows to ensure visibility
                 if (upcoming.length === 0) {
                     upcoming = parsedClasses;
                 }
 
-                // Sort chronologically
                 upcoming.sort((a, b) => (a.dateObj && b.dateObj ? a.dateObj - b.dateObj : 0));
+                allUpcomingClasses = upcoming;
 
-                renderScheduleList(upcoming);
+                setupDayFilters(allUpcomingClasses);
+                applyFilterAndRender();
 
             } catch (err) {
                 console.error(err);
@@ -190,27 +239,80 @@
             }
         }
 
+        function setupDayFilters(classes) {
+            const filterContainer = document.getElementById('filter-container');
+            const dayButtonsContainer = document.getElementById('day-buttons');
+
+            // Find unique days present in the active schedule
+            const activeDayIndexes = new Set();
+            classes.forEach(c => {
+                if (c.dateObj) activeDayIndexes.add(c.dateObj.getDay());
+            });
+
+            if (activeDayIndexes.size <= 1) {
+                filterContainer.classList.add('hidden');
+                return;
+            }
+
+            filterContainer.classList.remove('hidden');
+            let buttonsHtml = `
+                <button onclick="setDayFilter('ALL')" id="btn-filter-ALL" class="px-3 py-1 text-xs font-semibold rounded-full border transition-colors bg-white text-black border-white">
+                    All
+                </button>
+            `;
+
+            // Sort standard Sun-Sat order
+            const sortedDays = Array.from(activeDayIndexes).sort((a, b) => a - b);
+            sortedDays.forEach(dayIdx => {
+                const dayName = DAYS_OF_WEEK[dayIdx];
+                buttonsHtml += `
+                    <button onclick="setDayFilter('${dayName}')" id="btn-filter-${dayName}" class="px-3 py-1 text-xs font-semibold rounded-full border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-neutral-500 transition-colors">
+                        ${dayName}s
+                    </button>
+                `;
+            });
+
+            dayButtonsContainer.innerHTML = buttonsHtml;
+        }
+
+        function setDayFilter(day) {
+            selectedDayFilter = day;
+
+            // Update active pill button styling
+            const buttons = document.querySelectorAll('#day-buttons button');
+            buttons.forEach(btn => {
+                btn.className = 'px-3 py-1 text-xs font-semibold rounded-full border border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-neutral-500 transition-colors';
+            });
+
+            const activeBtn = document.getElementById(`btn-filter-${day}`);
+            if (activeBtn) {
+                activeBtn.className = 'px-3 py-1 text-xs font-semibold rounded-full border transition-colors bg-white text-black border-white';
+            }
+
+            applyFilterAndRender();
+        }
+
+        function applyFilterAndRender() {
+            let filtered = allUpcomingClasses;
+            if (selectedDayFilter !== 'ALL') {
+                filtered = allUpcomingClasses.filter(c => c.dayOfWeek === selectedDayFilter);
+            }
+            renderScheduleList(filtered);
+        }
+
         function renderScheduleList(classes) {
             const container = document.getElementById('schedule-container');
             
             if (classes.length === 0) {
-                container.innerHTML = '<p class="text-neutral-500 italic text-center py-8">No upcoming classes scheduled.</p>';
+                container.innerHTML = '<p class="text-neutral-500 italic text-center py-8">No upcoming classes scheduled for this selection.</p>';
                 return;
             }
 
             let html = '';
 
             classes.forEach(item => {
-                let badgeClasses = 'bg-neutral-800 text-neutral-300 border-neutral-700';
-                let isTest = false;
-
-                if (/belt test/i.test(item.topic)) {
-                    badgeClasses = 'bg-accent/20 text-red-400 border border-red-800/60 font-semibold';
-                    isTest = true;
-                } else if (/open practice/i.test(item.topic)) {
-                    badgeClasses = 'bg-[#3b2b1a] text-[#ffd199] border border-[#5c4028]';
-                }
-
+                const badgeClasses = getTopicBadgeStyle(item.topic);
+                const isBeltTest = /belt test/i.test(item.topic);
                 const hasNotes = item.notes && item.notes.trim().length > 0;
 
                 html += `
@@ -218,7 +320,7 @@
                         <button onclick="toggleNotes('${item.id}')" class="w-full text-left p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-neutral-800/60 focus:outline-none group">
                             
                             <div class="flex items-center space-x-4">
-                                <div class="w-2.5 h-2.5 rounded-full ${isTest ? 'bg-accent shadow-[0_0_8px_#dc2626]' : 'bg-neutral-600'}"></div>
+                                <div class="w-2.5 h-2.5 rounded-full ${isBeltTest ? 'bg-red-600 shadow-[0_0_8px_#dc2626]' : 'bg-neutral-600'}"></div>
                                 <div>
                                     <span class="font-bold text-base text-white group-hover:text-accent transition-colors">${item.dateStr}</span>
                                     ${item.time ? `<span class="text-xs font-mono text-neutral-400 ml-2 block sm:inline">(${item.time})</span>` : ''}
@@ -226,8 +328,8 @@
                             </div>
 
                             <div class="flex items-center justify-between md:justify-end gap-3 pl-6 md:pl-0">
-                                <span class="px-3 py-1 rounded text-xs tracking-wider uppercase border ${badgeClasses}">
-                                    ${item.topic || 'TBD'}
+                                <span class="px-3 py-1 rounded-full text-xs tracking-wider uppercase border shadow-sm ${badgeClasses}">
+                                    ${item.topic}
                                 </span>
                                 
                                 <div class="flex items-center text-neutral-500 text-xs gap-1 ml-2">
