@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zen Martial Arts International NW (ZMAINW)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="flex flex-col h-screen overflow-hidden">
+
+    <!-- Top Navigation Bar -->
+    <header class="h-16 flex items-center justify-between px-4 lg:px-6 bg-black border-b border-neutral-800 shrink-0 z-50 relative">
+        <!-- Logo -->
+        <div class="flex items-center cursor-pointer" onclick="navigateTo('home')">
+            <span class="font-bold text-2xl tracking-wider text-white">ZMA<span class="text-accent">INW</span></span>
+        </div>
+
+        <!-- Mobile Hamburger Menu Button -->
+        <button id="mobile-menu-btn" class="md:hidden text-neutral-300 hover:text-white focus:outline-none ml-auto mr-4 text-2xl">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <!-- External Links Container (Dynamically Populated via JS) -->
+        <div id="desktop-external-links" class="hidden md:flex items-center space-x-6 text-sm font-medium uppercase tracking-wide mr-4">
+            <!-- Content injected via renderExternalLinks() -->
+        </div>
+
+        <!-- Contact Button -->
+        <div>
+            <button onclick="navigateTo('contact')" class="bg-accent bg-accent-hover text-white px-4 py-2 rounded-sm text-sm font-bold uppercase tracking-wide transition-colors transform hover:scale-105 shadow-lg">
+                Contact Us
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Dropdown Navigation -->
+    <div id="mobile-menu" class="hidden absolute top-16 left-0 w-full bg-black border-b border-neutral-800 z-40 flex-col shadow-2xl md:hidden overflow-y-auto max-h-[calc(100vh-4rem)]">
+        <button onclick="navigateTo('home'); toggleMobileMenu();" id="nav-mobile-home" class="nav-item text-left px-6 py-4 border-b border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-900 uppercase font-bold text-sm tracking-wide flex items-center"><i class="fas fa-home w-6 mr-2"></i> Home</button>
+        <button onclick="navigateTo('about'); toggleMobileMenu();" id="nav-mobile-about" class="nav-item text-left px-6 py-4 border-b border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-900 uppercase font-bold text-sm tracking-wide flex items-center"><i class="fas fa-yin-yang w-6 mr-2"></i> About ZMA</button>
+        <button onclick="navigateTo('schedule'); toggleMobileMenu();" id="nav-mobile-schedule" class="nav-item text-left px-6 py-4 border-b border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-900 uppercase font-bold text-sm tracking-wide flex items-center"><i class="fas fa-calendar-alt w-6 mr-2"></i> Classes & Cost</button>
+        <button onclick="navigateTo('instructors'); toggleMobileMenu();" id="nav-mobile-instructors" class="nav-item text-left px-6 py-4 border-b border-neutral-800 text-neutral-300 hover:text-white hover:bg-neutral-900 uppercase font-bold text-sm tracking-wide flex items-center"><i class="fas fa-users w-6 mr-2"></i> Instructors</button>
+        
+        <!-- Mobile External Links Container (Dynamically Populated via JS) -->
+        <div id="mobile-external-links" class="flex flex-col">
+            <!-- Content injected via renderExternalLinks() -->
+        </div>
+    </div>
+
+    <!-- Main Layout Container -->
+    <div class="flex flex-1 overflow-hidden relative">
+        
+        <!-- Desktop Sidebar Navigation -->
+        <aside class="w-64 bg-neutral-900 border-r border-neutral-800 flex-col hidden md:flex shrink-0 z-10 py-6">
+            <nav class="flex flex-col w-full space-y-2">
+                <button onclick="navigateTo('home')" id="nav-desktop-home" class="nav-item flex items-center w-full px-6 py-4 text-left text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors uppercase tracking-wider font-medium text-sm">
+                    <i class="fas fa-home w-6 mr-3 text-lg"></i> Home
+                </button>
+                <button onclick="navigateTo('about')" id="nav-desktop-about" class="nav-item flex items-center w-full px-6 py-4 text-left text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors uppercase tracking-wider font-medium text-sm">
+                    <i class="fas fa-yin-yang w-6 mr-3 text-lg"></i> About ZMA
+                </button>
+                <button onclick="navigateTo('schedule')" id="nav-desktop-schedule" class="nav-item flex items-center w-full px-6 py-4 text-left text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors uppercase tracking-wider font-medium text-sm">
+                    <i class="fas fa-calendar-alt w-6 mr-3 text-lg"></i> Classes & Cost
+                </button>
+                <button onclick="navigateTo('instructors')" id="nav-desktop-instructors" class="nav-item flex items-center w-full px-6 py-4 text-left text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors uppercase tracking-wider font-medium text-sm">
+                    <i class="fas fa-users w-6 mr-3 text-lg"></i> Instructors
+                </button>
+            </nav>
+            <div class="mt-auto px-6 pb-4">
+                <p class="text-xs text-neutral-500 text-center uppercase tracking-widest border-t border-neutral-800 pt-4">
+                    Est. Seattle, WA
+                </p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main id="main-content" class="flex-1 overflow-y-auto bg-[#111] p-4 md:p-8 lg:p-12 pb-12 scroll-smooth">
+            <!-- Content gets injected here -->
+        </main>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        const topNavLinksConfig = [
+            { type: 'protected', label: 'Class Schedule', icon: 'fa-lock', target: 'schedule' },
+            { type: 'protected', label: 'Curriculum', icon: 'fa-lock', target: 'curriculum' },
+            { type: 'link', label: 'Zen Martial Arts', icon: 'fa-external-link-alt', url: 'https://www.zmainw.com/history/zen-martial-arts-history' },
+            { type: 'link', label: 'Self Defense', icon: 'fa-external-link-alt', url: 'https://www.zmainw.com/information/self-defense-de-escalation' },
+            { type: 'link', label: 'JFANW', icon: 'fa-external-link-alt', url: 'https://www.jfanw.com/' }
+        ];
+
+        const views = {
+            home: `
+                <div class="fade-in max-w-5xl mx-auto">
+                    <div class="relative rounded-xl overflow-hidden mb-12 shadow-2xl border border-neutral-800">
+                        <div class="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent z-10"></div>
+                        <img src="https://images.unsplash.com/photo-1555597673-b21d5c935865?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80" alt="Martial Arts" class="w-full h-80 object-cover object-center">
+                        <div class="absolute inset-0 z-20 flex flex-col justify-center px-8 md:px-12">
+                            <h1 class="text-4xl md:text-6xl font-bold text-white mb-4 uppercase tracking-tight">Zen Martial Arts <br/><span class="text-accent">International NW</span></h1>
+                            <p class="text-lg md:text-xl text-neutral-300 max-w-xl border-l-4 border-accent pl-4">
+                                We are a martial arts school located in Seattle, WA. People of all ages and experience levels are welcome to come train with us!
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                        <div>
+                            <h2 class="text-2xl font-bold uppercase mb-4 text-white border-b border-neutral-800 pb-2">The Zen Martial Arts System</h2>
+                            <p class="text-neutral-400 leading-relaxed mb-4">
+                                The Zen Martial Arts is an inclusive and ever-growing system with a collection of martial arts practices and traditions, both young and old, that promote the development of the body, mind, and spirit of each practitioner.
+                            </p>
+                            <p class="text-neutral-400 leading-relaxed">
+                                Our system has been derived from multiple martial art styles including Taekwondo, Karate, Judo, Jujitsu, Wing Chun, and Arnis. We provide well-rounded martial arts training to anyone who takes part.
+                            </p>
+                        </div>
+                        <div class="bg-neutral-900 p-6 rounded-lg border border-neutral-800 shadow-lg">
+                            <h3 class="text-xl font-bold uppercase mb-4 text-white"><i class="fas fa-info-circle text-accent mr-2"></i> Quick Info</h3>
+                            <ul class="space-y-4 text-neutral-300">
+                                <li class="flex items-start"><i class="fas fa-map-marker-alt text-accent mt-1 mr-3 w-4"></i> <span>Located in Seattle, WA.</span></li>
+                                <li class="flex items-start"><i class="fas fa-users text-accent mt-1 mr-3 w-4"></i> <span>Many students practice with their families in our multi-generational class.</span></li>
+                                <li class="flex items-start"><i class="fas fa-calendar-check text-accent mt-1 mr-3 w-4"></i> <span>Main classes are held on Tuesdays and Saturdays.</span></li>
+                            </ul>
+                            <button onclick="navigateTo('schedule')" class="mt-6 w-full bg-neutral-800 hover:bg-neutral-700 text-white font-bold py-3 px-4 rounded transition-colors text-sm uppercase tracking-wider border border-neutral-700">
+                                View Full Schedule
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `,
+            about: `
+                <div class="fade-in max-w-5xl mx-auto">
+                    <h1 class="text-4xl font-bold text-white mb-8 uppercase tracking-wide border-b border-neutral-800 pb-4">About Our Class</h1>
+                    
+                    <div class="space-y-12">
+                        <!-- Environment -->
+                        <section>
+                            <h2 class="text-2xl font-bold text-accent mb-4 uppercase">The Class Environment</h2>
+                            <p class="text-neutral-300 leading-relaxed mb-4">
+                                We believe that the martial arts is for anyone and are committed to providing training that fits every skill level, background, and body type. We not only practice martial arts techniques, but also seek to develop skills such as focus, discipline, respect, patience, perseverance, and encouragement.
+                            </p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                                <div class="bg-neutral-900 p-6 rounded-lg border-l-2 border-accent">
+                                    <p class="text-neutral-400 italic">"We talk about when is and isn't a time to fight. We help each other gain control over our emotions and learn how to defuse dangerous situations."</p>
+                                </div>
+                                <div class="bg-neutral-900 p-6 rounded-lg border-l-2 border-accent">
+                                    <p class="text-neutral-400 italic">"We believe that encouraging and building people up is the best way to teach. Our classes are friendly and safe environments where people can help each other progress."</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Belt System -->
+                        <section class="bg-[#1a1a1a] p-8 rounded-xl border border-neutral-800">
+                            <h2 class="text-2xl font-bold text-white mb-6 uppercase">Our Belt System</h2>
+                            <p class="text-neutral-400 mb-6">The belt system used in the ZMA has three options for students to progress through depending on what suits them best:</p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                <div class="bg-neutral-900 p-5 rounded-lg border border-neutral-800 text-center">
+                                    <div class="w-12 h-12 rounded-full bg-neutral-800 border-2 border-neutral-600 mx-auto mb-4 flex items-center justify-center"><i class="fas fa-road text-white"></i></div>
+                                    <h3 class="text-lg font-bold text-white mb-2">Standard Path</h3>
+                                    <p class="text-sm text-neutral-400">The main curriculum, ranging from student ranks (10th-1st Kyū) through to the instructor ranks (1st-9th Dan).</p>
+                                </div>
+                                <div class="bg-neutral-900 p-5 rounded-lg border border-neutral-800 text-center">
+                                    <div class="w-12 h-12 rounded-full bg-neutral-800 border-2 border-yellow-500 mx-auto mb-4 flex items-center justify-center"><i class="fas fa-child text-white"></i></div>
+                                    <h3 class="text-lg font-bold text-white mb-2">Junior Belts</h3>
+                                    <p class="text-sm text-neutral-400">Intended for anyone below the age of 13. Breaks down the first few color belts in the standard system into smaller chunks.</p>
+                                </div>
+                                <div class="bg-neutral-900 p-5 rounded-lg border border-neutral-800 text-center">
+                                    <div class="w-12 h-12 rounded-full bg-neutral-800 border-2 border-neutral-400 mx-auto mb-4 flex items-center justify-center"><i class="fas fa-award text-white"></i></div>
+                                    <h3 class="text-lg font-bold text-white mb-2">Milestone Ranks</h3>
+                                    <p class="text-sm text-neutral-400">Includes three levels of gray belt representing the completion of a section in the standard curriculum.</p>
+                                </div>
+                            </div>
+
+                            <p class="text-accent font-bold text-center uppercase tracking-wide">
+                                We will never charge extra for promotions. In the Zen Martial Arts, your belts must be earned, not bought.
+                            </p>
+                        </section>
+                    </div>
+                </div>
+            `,
+            schedule: `
+                <div class="fade-in max-w-5xl mx-auto">
+                    <h1 class="text-4xl font-bold text-white mb-8 uppercase tracking-wide border-b border-neutral-800 pb-4">Schedule & Membership</h1>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                        <!-- Schedule -->
+                        <div>
+                            <h2 class="text-2xl font-bold text-white mb-6 uppercase flex items-center"><i class="fas fa-clock text-accent mr-3"></i> Class Schedule</h2>
+                            
+                            <div class="space-y-6">
+                                <div class="bg-neutral-900 p-6 rounded-lg border border-neutral-800 relative overflow-hidden">
+                                    <div class="absolute top-0 left-0 w-1 h-full bg-accent"></div>
+                                    <h3 class="text-xl font-bold text-white mb-1">Tuesday Classes</h3>
+                                    <p class="text-accent text-sm font-bold uppercase tracking-wider mb-4">6:00 PM - 8:30 PM</p>
+                                    <p class="text-neutral-400 text-sm mb-4">Our main class of the week with multiple instructors and teaching assistants.</p>
+                                    <ul class="text-neutral-300 text-sm space-y-2 font-mono bg-black p-4 rounded border border-neutral-800">
+                                        <li><span class="text-neutral-500 mr-2">6:00-6:10 PM</span> Setting up and cleaning</li>
+                                        <li><span class="text-neutral-500 mr-2">6:10-6:30 PM</span> Warmups & wellness exercise</li>
+                                        <li><span class="text-neutral-500 mr-2">6:30-7:30 PM</span> Full class practice (designated topic)</li>
+                                        <li><span class="text-neutral-500 mr-2">7:30-8:00 PM</span> Advanced continuation / breakouts</li>
+                                        <li><span class="text-neutral-500 mr-2">8:00-8:30 PM</span> Community time & clean up</li>
+                                    </ul>
+                                </div>
+
+                                <div class="bg-neutral-900 p-6 rounded-lg border border-neutral-800 relative overflow-hidden">
+                                    <div class="absolute top-0 left-0 w-1 h-full bg-neutral-600"></div>
+                                    <h3 class="text-xl font-bold text-white mb-1">Saturday Classes</h3>
+                                    <p class="text-neutral-400 text-sm font-bold uppercase tracking-wider mb-3">9:30 AM - 11:30 AM</p>
+                                    <p class="text-neutral-400 text-sm">
+                                        Open practices. Students should feel free to arrive late or leave early as needed. An instructor will be there to answer questions, provide feedback, or fill in as a partner.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cost/Membership -->
+                        <div>
+                            <h2 class="text-2xl font-bold text-white mb-6 uppercase flex items-center"><i class="fas fa-tags text-accent mr-3"></i> Membership Cost</h2>
+                            
+                            <div class="bg-neutral-900 p-8 rounded-lg border border-neutral-800 text-center mb-6">
+                                <p class="text-neutral-400 mb-6 text-left">
+                                    Instructors at ZMAINW are all volunteers, including the owner, Greg Di Loreto. The money we receive goes into the class account for liability insurance and martial arts equipment. Financial information is open-book for anyone in the school.
+                                </p>
+                                <div class="flex flex-col sm:flex-row justify-center gap-4 mb-6">
+                                    <div class="bg-black p-4 rounded border border-neutral-800 flex-1">
+                                        <p class="text-neutral-500 text-sm uppercase font-bold tracking-widest mb-1">Individual</p>
+                                        <p class="text-3xl font-bold text-white">$50<span class="text-lg text-neutral-500 font-normal">/mo</span></p>
+                                    </div>
+                                    <div class="bg-black p-4 rounded border border-neutral-800 flex-1">
+                                        <p class="text-neutral-500 text-sm uppercase font-bold tracking-widest mb-1">Family</p>
+                                        <p class="text-3xl font-bold text-white">$75<span class="text-lg text-neutral-500 font-normal">/mo</span></p>
+                                    </div>
+                                </div>
+                                <div class="bg-red-900/20 border border-red-900/50 p-4 rounded text-left">
+                                    <p class="text-neutral-300 text-sm">
+                                        <i class="fas fa-heart text-accent mr-2"></i> We strongly believe that the martial arts should be for everyone, regardless of their financial ability, so we are more than happy to waive the fee for those who need that support.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            instructors: `
+                <div class="fade-in max-w-7xl mx-auto">
+                    <h1 class="text-4xl font-bold text-white mb-4 uppercase tracking-wide text-center">Our Instructors</h1>
+                    <p class="text-neutral-400 text-center mb-10 max-w-2xl mx-auto">Our instructors are dedicated volunteers who view martial arts not as a job, but as an opportunity to share knowledge with the community.</p>
+
+                    <h2 class="text-2xl font-bold text-white mb-8 uppercase tracking-wide border-b border-neutral-800 pb-4">Regular Instructors</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        
+                        <!-- Greg Di Loreto -->
+                        <div class="bg-neutral-900 rounded-lg p-6 border border-neutral-800 flex flex-col hover:border-accent transition-colors">
+                            <h3 class="text-xl font-bold text-white">Greg Di Loreto</h3>
+                            <p class="text-accent text-sm uppercase font-bold tracking-wider mb-3">Kyoshi | Godan (5th-Degree)</p>
+                            <p class="text-neutral-400 text-sm flex-1">Has 40 years of experience and is the active lineage holder of the Zen Martial Arts system. He has been leading ZMAINW tirelessly for 20 years.</p>
+                        </div>
+
+                        <!-- Troy Swartwood -->
+                        <div class="bg-neutral-900 rounded-lg p-6 border border-neutral-800 flex flex-col hover:border-accent transition-colors">
+                            <h3 class="text-xl font-bold text-white">Troy Swartwood</h3>
+                            <p class="text-accent text-sm uppercase font-bold tracking-wider mb-3">Shidoin | Nidan (2nd-Degree)</p>
+                            <p class="text-neutral-400 text-sm flex-1">Joined in 2006 with his son, James. Has 19 years of experience, bringing an amazing influence to the school and continuing to find joy in learning.</p>
+                        </div>
+
+                        <!-- Paul Vahey -->
+                        <div class="bg-neutral-900 rounded-lg p-6 border border-neutral-800 flex flex-col hover:border-accent transition-colors">
+                            <h3 class="text-xl font-bold text-white">Paul Vahey</h3>
+                            <p class="text-accent text-sm uppercase font-bold tracking-wider mb-3">Shidoin | Nidan (2nd-Degree)</p>
+                            <p class="text-neutral-400 text-sm flex-1">Joined in 2010. Balances rigorous training with critical thought and inspires everyone around him to do the same.</p>
+                        </div>
+
+                        <!-- William Chad Young -->
+                        <div class="bg-neutral-900 rounded-lg p-6 border border-neutral-800 flex flex-col hover:border-accent transition-colors">
+                            <h3 class="text-xl font-bold text-white">William Chad Young</h3>
+                            <p class="text-accent text-sm uppercase font-bold tracking-wider mb-3">Shidoin | Shodan (1st-Degree)</p>
+                            <p class="text-neutral-400 text-sm flex-1">A consistent part of our class for the past decade. An example of true excellence and dedication with the heart of a champion.</p>
+                        </div>
+
+                        <!-- Michelle Young -->
+                        <div class="bg-neutral-900 rounded-lg p-6 border border-neutral-800 flex flex-col hover:border-accent transition-colors">
+                            <h3 class="text-xl font-bold text-white">Michelle Young</h3>
+                            <p class="text-accent text-sm uppercase font-bold tracking-wider mb-3">Assistant | 1st Kyū (3rd-Degree Brown)</p>
+                            <p class="text-neutral-400 text-sm flex-1">A teaching assistant and outside wellness practice instructor who has positively influenced the mental aspect of our practice.</p>
+                        </div>
+
+                        <!-- Becca Price -->
+                        <div class="bg-neutral-900 rounded-lg p-6 border border-neutral-800 flex flex-col hover:border-accent transition-colors">
+                            <h3 class="text-xl font-bold text-white">Becca Price</h3>
+                            <p class="text-accent text-sm uppercase font-bold tracking-wider mb-3">Assistant | 1st Kyū (3rd-Degree Brown)</p>
+                            <p class="text-neutral-400 text-sm flex-1">A teaching assistant and accomplished professor at the University of Washington, Bothell. Brings a depth of understanding to all she works with.</p>
+                        </div>
+
+                    </div>
+
+                    <h2 class="text-2xl font-bold text-white mt-16 mb-8 uppercase tracking-wide border-b border-neutral-800 pb-4">Previous Instructors</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                        <!-- James Swartwood -->
+                        <div class="bg-neutral-900 rounded-lg p-6 border border-neutral-800 flex flex-col hover:border-accent transition-colors">
+                            <h3 class="text-xl font-bold text-white">James Swartwood</h3>
+                            <p class="text-accent text-sm uppercase font-bold tracking-wider mb-3">Renshi | Yondan (4th-Degree)</p>
+                            <p class="text-neutral-400 text-sm flex-1">Has 19 years of experience. He has studied outside of ZMA since 2016 and is recognized as a black belt by the JFANW group.</p>
+                        </div>
+
+                        <!-- Gianna Di Loreto -->
+                        <div class="bg-neutral-900 rounded-lg p-6 border border-neutral-800 flex flex-col hover:border-accent transition-colors">
+                            <h3 class="text-xl font-bold text-white">Gianna Di Loreto</h3>
+                            <p class="text-accent text-sm uppercase font-bold tracking-wider mb-3">Shidoin | Shodan (1st-Degree)</p>
+                            <p class="text-neutral-400 text-sm flex-1">Has been doing martial arts her whole life. She is also an accomplished dancer, serving as the Honor Club President at All That Dance studio.</p>
+                        </div>
+
+                        <!-- Azalea Young -->
+                        <div class="bg-neutral-900 rounded-lg p-6 border border-neutral-800 flex flex-col hover:border-accent transition-colors">
+                            <h3 class="text-xl font-bold text-white">Azalea Young</h3>
+                            <p class="text-accent text-sm uppercase font-bold tracking-wider mb-3">Assistant | 3rd Kyū (1st-Degree Brown)</p>
+                            <p class="text-neutral-400 text-sm flex-1">A teaching assistant who takes deep joy in exploring the biomechanics of our practice and sharing what she has learned.</p>
+                        </div>
+
+                    </div>
+                </div>
+            `,
+            contact: `
+                <div class="fade-in max-w-4xl mx-auto flex flex-col justify-center min-h-[70vh]">
+                    <div class="text-center mb-10">
+                        <h1 class="text-4xl font-bold text-white mb-4 uppercase">Contact Us</h1>
+                        <p class="text-neutral-400">You are welcome to join our school either by invitation from a current member or by applying below.</p>
+                    </div>
+
+                    <div class="bg-neutral-900 p-8 rounded-xl border border-neutral-800 shadow-2xl">
+                        <form onsubmit="handleContactSubmit(event)">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div>
+                                    <label class="block text-neutral-400 text-xs font-bold mb-2 uppercase tracking-wide" for="name">Name</label>
+                                    <input class="w-full bg-black text-white border border-neutral-700 rounded py-3 px-4 focus:outline-none focus:border-accent transition-colors" id="name" type="text" placeholder="Your Name" required>
+                                </div>
+                                <div>
+                                    <label class="block text-neutral-400 text-xs font-bold mb-2 uppercase tracking-wide" for="email">Email</label>
+                                    <input class="w-full bg-black text-white border border-neutral-700 rounded py-3 px-4 focus:outline-none focus:border-accent transition-colors" id="email" type="email" placeholder="your@email.com" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-6">
+                                <label class="block text-neutral-400 text-xs font-bold mb-2 uppercase tracking-wide" for="message">Message / Questions</label>
+                                <textarea class="w-full bg-black text-white border border-neutral-700 rounded py-3 px-4 focus:outline-none focus:border-accent transition-colors h-32 resize-none" id="message" placeholder="Tell us about yourself and any questions you have..."></textarea>
+                            </div>
+
+                            <button type="submit" class="w-full bg-accent bg-accent-hover text-white font-bold py-4 px-8 rounded shadow-lg uppercase tracking-widest transition-transform transform hover:translate-y-[-2px]">
+                                Submit Application
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            `
+        };
+
+        function renderExternalLinks() {
+            const desktopContainer = document.getElementById('desktop-external-links');
+            const mobileContainer = document.getElementById('mobile-external-links');
+            
+            let desktopHTML = '';
+            let mobileHTML = '';
+
+            topNavLinksConfig.forEach(link => {
+                if (link.type === 'protected') {
+                    desktopHTML += `
+                        <button onclick="handleProtectedNavigation('${link.target}')" class="text-neutral-400 hover:text-white transition-colors flex items-center whitespace-nowrap">
+                            <i class="fas ${link.icon} mr-1 text-xs"></i> ${link.label.toUpperCase()}
+                        </button>`;
+                    
+                    mobileHTML += `
+                        <button onclick="handleProtectedNavigation('${link.target}'); toggleMobileMenu();" class="text-left px-6 py-4 border-b border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 uppercase font-bold text-sm tracking-wide flex items-center">
+                            <i class="fas ${link.icon} w-6 mr-2"></i> ${link.label}
+                        </button>`;
+                } else {
+                    desktopHTML += `
+                        <a href="${link.url}" target="_blank" class="text-neutral-400 hover:text-white transition-colors flex items-center whitespace-nowrap">
+                            <i class="fas ${link.icon} mr-1 text-xs"></i> ${link.label}
+                        </a>`;
+                    
+                    mobileHTML += `
+                        <a href="${link.url}" target="_blank" onclick="toggleMobileMenu();" class="text-left px-6 py-4 border-b border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 uppercase font-bold text-sm tracking-wide flex items-center">
+                            <i class="fas ${link.icon} w-6 mr-2"></i> ${link.label}
+                        </a>`;
+                }
+            });
+
+            if (desktopContainer) desktopContainer.innerHTML = desktopHTML;
+            if (mobileContainer) mobileContainer.innerHTML = mobileHTML;
+        }
+
+        function navigateTo(viewName) {
+            const mainContent = document.getElementById('main-content');
+            
+            mainContent.style.opacity = '0';
+            
+            setTimeout(() => {
+                mainContent.scrollTo({ top: 0, behavior: 'instant' });
+                mainContent.innerHTML = views[viewName] || views['home'];
+                mainContent.style.opacity = '1';
+                updateActiveNav(viewName);
+            }, 150);
+        }
+
+        function updateActiveNav(viewName) {
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            if(viewName === 'contact') return;
+
+            const desktopNav = document.getElementById(`nav-desktop-${viewName}`);
+            const mobileNav = document.getElementById(`nav-mobile-${viewName}`);
+            
+            if(desktopNav) desktopNav.classList.add('active');
+            if(mobileNav) mobileNav.classList.add('active');
+        }
+
+        function handleProtectedNavigation(target) {
+            const passwordAttempt = prompt("Please enter the password to view this document:");
+            if (passwordAttempt === "humblewarrior") {
+                if (target === 'schedule') {
+                    window.open("https://docs.google.com/spreadsheets/d/1kNjWglka89LPcv4jOI7HbiCQx-44d2d0cTLTgMZAZQY/edit?usp=drive_link", "_blank");
+                } else if (target === 'curriculum') {
+                    window.open("https://www.zmainw.com/curriculum", "_blank");
+                }
+            } else if (passwordAttempt !== null) {
+                alert("Incorrect password. Access denied.");
+            }
+        }
+
+        function handleContactSubmit(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerText;
+            
+            btn.innerText = "Message Sent!";
+            btn.classList.add('bg-green-600');
+            btn.classList.remove('bg-accent', 'bg-accent-hover');
+            
+            setTimeout(() => {
+                e.target.reset();
+                btn.innerText = originalText;
+                btn.classList.remove('bg-green-600');
+                btn.classList.add('bg-accent', 'bg-accent-hover');
+            }, 3000);
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+            menu.classList.toggle('flex');
+        }
+
+        document.getElementById('mobile-menu-btn').addEventListener('click', toggleMobileMenu);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderExternalLinks();
+            navigateTo('home');
+        });
+    </script>
+</body>
+</html>
