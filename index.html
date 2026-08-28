@@ -358,41 +358,6 @@
             `
         };
 
-        function renderExternalLinks() {
-            const desktopContainer = document.getElementById('desktop-external-links');
-            const mobileContainer = document.getElementById('mobile-external-links');
-            
-            let desktopHTML = '';
-            let mobileHTML = '';
-
-            topNavLinksConfig.forEach(link => {
-                if (link.type === 'protected') {
-                    desktopHTML += `
-                        <button onclick="handleProtectedNavigation('${link.target}')" class="text-neutral-400 hover:text-white transition-colors flex items-center whitespace-nowrap">
-                            <i class="fas ${link.icon} mr-1 text-xs"></i> ${link.label.toUpperCase()}
-                        </button>`;
-                    
-                    mobileHTML += `
-                        <button onclick="handleProtectedNavigation('${link.target}'); toggleMobileMenu();" class="text-left px-6 py-4 border-b border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 uppercase font-bold text-sm tracking-wide flex items-center">
-                            <i class="fas ${link.icon} w-6 mr-2"></i> ${link.label}
-                        </button>`;
-                } else {
-                    desktopHTML += `
-                        <a href="${link.url}" target="_blank" class="text-neutral-400 hover:text-white transition-colors flex items-center whitespace-nowrap">
-                            <i class="fas ${link.icon} mr-1 text-xs"></i> ${link.label}
-                        </a>`;
-                    
-                    mobileHTML += `
-                        <a href="${link.url}" target="_blank" onclick="toggleMobileMenu();" class="text-left px-6 py-4 border-b border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 uppercase font-bold text-sm tracking-wide flex items-center">
-                            <i class="fas ${link.icon} w-6 mr-2"></i> ${link.label}
-                        </a>`;
-                }
-            });
-
-            if (desktopContainer) desktopContainer.innerHTML = desktopHTML;
-            if (mobileContainer) mobileContainer.innerHTML = mobileHTML;
-        }
-
         function navigateTo(viewName) {
             const mainContent = document.getElementById('main-content');
             
@@ -420,13 +385,13 @@
             if(mobileNav) mobileNav.classList.add('active');
         }
 
-        // Helper to set a cookie with a 30-day expiration
-        function setAuthCookie(name, value, days = 90) {
+        // Helper to set a cookie with expiration in days
+        function setAuthCookie(name, value, days = 30) {
             const expires = new Date(Date.now() + days * 864e5).toUTCString();
             document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
         }
 
-        // Helper to get a cookie value by name
+        // Helper to check cookie value
         function getAuthCookie(name) {
             const value = `; ${document.cookie}`;
             const parts = value.split(`; ${name}=`);
@@ -434,19 +399,64 @@
             return null;
         }
 
+        // Check whether the user is already authenticated
+        function isAuthenticated() {
+            return getAuthCookie('zma_authenticated') === 'true';
+        }
+
+        function renderExternalLinks() {
+            const desktopContainer = document.getElementById('desktop-external-links');
+            const mobileContainer = document.getElementById('mobile-external-links');
+            const authenticated = isAuthenticated();
+            
+            let desktopHTML = '';
+            let mobileHTML = '';
+
+            topNavLinksConfig.forEach(link => {
+                if (link.type === 'protected') {
+                    // Switch lock icon and color based on cookie detection
+                    const iconClass = authenticated ? 'fa-lock-open text-accent' : 'fa-lock text-neutral-400';
+
+                    desktopHTML += `
+                        <button onclick="handleProtectedNavigation('${link.target}')" class="text-neutral-400 hover:text-white transition-colors flex items-center whitespace-nowrap">
+                            <i class="fas ${iconClass} mr-1.5 text-xs"></i> ${link.label.toUpperCase()}
+                        </button>`;
+                    
+                    mobileHTML += `
+                        <button onclick="handleProtectedNavigation('${link.target}'); toggleMobileMenu();" class="text-left px-6 py-4 border-b border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 uppercase font-bold text-sm tracking-wide flex items-center">
+                            <i class="fas ${iconClass} w-6 mr-2"></i> ${link.label}
+                        </button>`;
+                } else {
+                    desktopHTML += `
+                        <a href="${link.url}" target="_blank" class="text-neutral-400 hover:text-white transition-colors flex items-center whitespace-nowrap">
+                            <i class="fas ${link.icon} mr-1 text-xs"></i> ${link.label}
+                        </a>`;
+                    
+                    mobileHTML += `
+                        <a href="${link.url}" target="_blank" onclick="toggleMobileMenu();" class="text-left px-6 py-4 border-b border-neutral-800 text-neutral-400 hover:text-white hover:bg-neutral-900 uppercase font-bold text-sm tracking-wide flex items-center">
+                            <i class="fas ${link.icon} w-6 mr-2"></i> ${link.label}
+                        </a>`;
+                }
+            });
+
+            if (desktopContainer) desktopContainer.innerHTML = desktopHTML;
+            if (mobileContainer) mobileContainer.innerHTML = mobileHTML;
+        }
+
         function handleProtectedNavigation(target) {
             const targetUrl = target === 'schedule' ? 'schedule.html' : 'curriculum.html';
-            
-            // Check if the auth cookie already exists
-            if (getAuthCookie('zma_authenticated') === 'true') {
+
+            // Direct entry if cookie is detected
+            if (isAuthenticated()) {
                 window.location.href = targetUrl;
                 return;
             }
 
-            // Prompt for password if not authenticated yet
+            // Prompt if not authenticated
             const passwordAttempt = prompt("Please enter the password to view this document:");
             if (passwordAttempt === "humblewarrior") {
-                setAuthCookie('zma_authenticated', 'true', 90); // Valid for 30 days
+                setAuthCookie('zma_authenticated', 'true', 30);
+                renderExternalLinks(); // Re-renders icons to unlocked immediately
                 window.location.href = targetUrl;
             } else if (passwordAttempt !== null) {
                 alert("Incorrect password. Access denied.");
