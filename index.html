@@ -424,7 +424,7 @@
             const passwordAttempt = prompt("Please enter the password to view this document:");
             if (passwordAttempt === "humblewarrior") {
                 if (target === 'schedule') {
-                    window.open("https://docs.google.com/spreadsheets/d/1kNjWglka89LPcv4jOI7HbiCQx-44d2d0cTLTgMZAZQY/edit?usp=drive_link", "_blank");
+                    window.location.href = "schedule.html";
                 } else if (target === 'curriculum') {
                     window.location.href = "curriculum.html";
                 }
