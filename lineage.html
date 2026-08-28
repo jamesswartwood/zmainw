@@ -1067,18 +1067,17 @@
 
         function zoomToZMA() {
             resetToOriginalGraph(() => {
-                const zmaNodeIds = rawNodes
-                    .filter(n => n.label && n.label.toUpperCase().includes('ZMA'))
-                    .map(n => n.id);
-
-                if (zmaNodeIds.length > 0) {
-                    setTimeout(() => {
-                        network.fit({
-                            nodes: zmaNodeIds,
-                            animation: { duration: 400, easingFunction: 'easeInOutQuad' }
-                        });
-                    }, 10);
-                }
+                const directStudents = (outgoingMap['yip'] || []).map(e => e.to);
+                const targetNodes = ['yip', ...directStudents];
+                
+                setTimeout(() => {
+                    network.fit({
+                        nodes: targetNodes,
+                        animation: { duration: 400, easingFunction: 'easeInOutQuad' }
+                    });
+                    network.selectNodes(['yip']);
+                    highlightLineage('yip');
+                }, 10);
             });
         }
 
