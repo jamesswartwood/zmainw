@@ -100,6 +100,7 @@
             { type: 'link', label: 'Old Website', icon: 'fa-external-link-alt', url: 'https://www.zmaseattle.com/' },    
             { type: 'protected', label: 'Class Schedule', icon: 'fa-lock', target: 'schedule' },
             { type: 'protected', label: 'Curriculum', icon: 'fa-lock', target: 'curriculum' },
+            { type: 'protected', label: 'Lineage', icon: 'fa-lock', target: 'lineage' },
             { type: 'link', label: 'Zen Martial Arts', icon: 'fa-external-link-alt', url: 'https://www.zen-martial-arts.org/' },
             { type: 'link', label: 'Self Defense', icon: 'fa-external-link-alt', url: 'https://www.selfdefensenw.com/' }
         ];
@@ -444,7 +445,12 @@
         }
 
         function handleProtectedNavigation(target) {
-            const targetUrl = target === 'schedule' ? 'schedule.html' : 'curriculum.html';
+            const protectedRoutes = {
+                schedule: 'schedule.html',
+                curriculum: 'curriculum.html',
+                lineage: 'lineage.html'
+            };
+            const targetUrl = protectedRoutes[target] || `${target}.html`;
 
             // Direct entry if cookie is detected
             if (isAuthenticated()) {

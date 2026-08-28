@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ZMAINW - Martial Arts Lineage Tree</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+
+    <style>
+        #network-container {
+            width: 100%;
+            height: calc(100vh - 4rem);
+            background-color: #0f1115;
+        }
+        .text-accent {
+            color: #ff4a4a;
+        }
+        .vis-tooltip {
+            position: absolute;
+            background-color: #1a1d24;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            border: 1px solid #333;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        }
+        #search-results::-webkit-scrollbar {
+            width: 6px;
+        }
+        #search-results::-webkit-scrollbar-track {
+            background: #171717;
+        }
+        #search-results::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden bg-[#111] text-[#eee]">
+
+    <!-- Top Navigation Bar -->
+    <header class="h-16 flex items-center justify-between px-4 lg:px-6 bg-black border-b border-neutral-800 shrink-0 z-50 relative">
+        <div class="flex items-center cursor-pointer" onclick="window.location.href='index.html'">
+            <span class="font-bold text-2xl tracking-wider text-white">ZMA<span class="text-accent">INW</span></span>
+            <span class="ml-4 pl-4 border-l border-neutral-700 text-sm uppercase tracking-widest text-neutral-400 hidden sm:inline-block">Lineage Tree</span>
+        </div>
+
+        <div class="flex items-center space-x-2 sm:space-x-3">
+            <!-- Search Bar with Dropdown -->
+            <div class="relative w-44 sm:w-64">
+                <div class="relative flex items-center">
+                    <i class="fas fa-search absolute left-3 text-neutral-500 text-xs pointer-events-none"></i>
+                    <input type="text" id="node-search" placeholder="Search by name..." 
+                           autocomplete="off"
+                           class="w-full bg-neutral-900 border border-neutral-700 rounded-md pl-8 pr-7 py-1.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
+                           oninput="handleSearch(this.value)"
+                           onfocus="handleSearch(this.value)">
+                    <button id="search-clear-btn" onclick="clearSearch()" class="hidden absolute right-2 text-neutral-500 hover:text-neutral-300 text-xs">
+                        <i class="fas fa-times-circle"></i>
+                    </button>
+                </div>
+                <div id="search-results" class="hidden absolute left-0 right-0 top-full mt-1 bg-neutral-900 border border-neutral-800 rounded-md shadow-2xl max-h-64 overflow-y-auto z-50 divide-y divide-neutral-800/60"></div>
+            </div>
+
+            <!-- View / Focus Controls -->
+            <button onclick="zoomToZMAINW()" class="px-2.5 sm:px-3 py-1.5 bg-red-950/70 hover:bg-red-900 border border-red-500 text-white rounded text-xs font-semibold uppercase tracking-wider transition">
+                <i class="fas fa-crosshairs sm:mr-1.5 text-red-400"></i><span class="hidden sm:inline">Focus ZMAINW</span>
+            </button>
+            <button onclick="zoomToZMA()" class="px-2.5 sm:px-3 py-1.5 bg-red-900/30 hover:bg-red-900/50 border border-red-700/60 text-neutral-200 rounded text-xs font-semibold uppercase tracking-wider transition">
+                <i class="fas fa-bullseye sm:mr-1.5 text-accent"></i><span class="hidden sm:inline">Focus ZMA</span>
+            </button>
+            <button onclick="resetToOriginalGraph()" class="px-2.5 sm:px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded text-xs font-semibold uppercase tracking-wider transition">
+                <i class="fas fa-expand sm:mr-1.5"></i><span class="hidden sm:inline">Reset View</span>
+            </button>
+            <button onclick="window.location.href='index.html'" class="text-neutral-400 hover:text-white transition-colors text-sm font-bold uppercase tracking-wide hidden lg:flex items-center pl-2">
+                <i class="fas fa-arrow-left mr-2"></i> Back
+            </button>
+        </div>
+    </header>
+
+    <!-- Interactive Graph Container -->
+    <div class="relative flex-1">
+        <div id="network-container"></div>
+
+        <!-- Floating Active Focus Indicator -->
+        <div id="active-focus-badge" class="hidden absolute top-4 left-4 bg-neutral-900/90 backdrop-blur border border-red-500/50 px-3.5 py-2 rounded-lg text-xs z-40 shadow-xl flex items-center space-x-2">
+            <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+            <span class="text-neutral-300">Focused on: <strong id="active-focus-name" class="text-white"></strong></span>
+            <button onclick="resetToOriginalGraph()" class="ml-2 text-neutral-400 hover:text-white underline text-[11px]">Clear</button>
+        </div>
+
+        <!-- Floating Collapsible Legend -->
+        <div class="absolute bottom-4 right-4 bg-neutral-900/90 backdrop-blur border border-neutral-800 p-4 rounded-lg text-xs z-40 max-w-xs shadow-xl pointer-events-auto">
+            <div class="font-bold uppercase tracking-wider text-neutral-300 mb-2 border-b border-neutral-700 pb-1">Legend</div>
+            <div class="grid grid-cols-1 gap-1.5 mb-3">
+                <div class="flex items-center"><span class="w-3.5 h-3.5 rounded-full mr-2 border border-black/20" style="background:#fff9b5"></span><span class="text-neutral-300">Martial Arts Icon</span></div>
+                <div class="flex items-center"><span class="w-3.5 h-3.5 rounded-full mr-2 border border-black/20" style="background:#ffb5b5"></span><span class="text-neutral-300">Hanshi / Grandmaster</span></div>
+                <div class="flex items-center"><span class="w-3.5 h-3.5 rounded-full mr-2 border border-black/20" style="background:#ffc5c5"></span><span class="text-neutral-300">Kyoshi / High Master</span></div>
+                <div class="flex items-center"><span class="w-3.5 h-3.5 rounded-full mr-2 border border-black/20" style="background:#fce3e3"></span><span class="text-neutral-300">Renshi / Master</span></div>
+                <div class="flex items-center"><span class="w-3.5 h-3.5 rounded-full mr-2 border border-black/20" style="background:#d6d1e5"></span><span class="text-neutral-300">External Grandmaster</span></div>
+                <div class="flex items-center"><span class="w-3.5 h-3.5 rounded-full mr-2 border border-black/20" style="background:#d7f9fc"></span><span class="text-neutral-300">World Famous</span></div>
+                <div class="flex items-center"><span class="w-3.5 h-3.5 rounded-full mr-2 border border-black/20" style="background:#e2e2e2"></span><span class="text-neutral-300">Instructor / Practitioner</span></div>
+                <div class="flex items-center"><span class="w-3.5 h-3.5 rounded-full mr-2 border border-black/20" style="background:#ccddaa"></span><span class="text-neutral-300">Category / Root System</span></div>
+            </div>
+            <div class="font-bold uppercase tracking-wider text-neutral-300 mb-2 border-b border-neutral-700 pb-1">Selection Highlights</div>
+            <div class="grid grid-cols-1 gap-1.5">
+                <div class="flex items-center"><span class="w-3.5 h-1.5 mr-2" style="background:#ef4444"></span><span class="text-neutral-300">Direct Students (Red)</span></div>
+                <div class="flex items-center"><span class="w-3.5 h-1.5 mr-2" style="background:#f97316"></span><span class="text-neutral-300">Descendant Chain (Orange)</span></div>
+                <div class="flex items-center"><span class="w-3.5 h-1.5 mr-2" style="background:#3b82f6"></span><span class="text-neutral-300">Direct Instructors (Blue)</span></div>
+                <div class="flex items-center"><span class="w-3.5 h-1.5 mr-2" style="background:#38bdf8"></span><span class="text-neutral-300">Ancestor Chain (Light Blue)</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Authentication Guard
+        function getAuthCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+            return null;
+        }
+
+        if (getAuthCookie('zma_authenticated') !== 'true') {
+            const passwordAttempt = prompt("Please enter the password to view this page:");
+            if (passwordAttempt === "humblewarrior") {
+                const expires = new Date(Date.now() + 30 * 864e5).toUTCString();
+                document.cookie = `zma_authenticated=true; expires=${expires}; path=/; SameSite=Lax`;
+            } else {
+                alert("Access denied.");
+                window.location.href = "index.html";
+            }
+        }
+
+        // Color Palette
+        const colors = {
+            icon: '#fff9b5',
+            hanshi: '#ffb5b5',
+            kyoshi: '#ffc5c5',
+            renshi: '#fce3e3',
+            grandmaster: '#d6d1e5',
+            famous: '#d7f9fc',
+            instructor: '#e2e2e2',
+            dan: '#d2d2d2',
+            default: '#f5f7f7',
+            group: '#ccddaa'
+        };
+
+        // Complete Node List with Strict Hierarchical Level Assignments
+        const rawNodes = [
+            { id: 'chinese', label: 'Chinese Gongfu', level: 0, color: colors.group, shape: 'box' },
+            { id: 'japanese', label: 'Japanese Jujutsu', level: 0, color: colors.group, shape: 'box' },
+            { id: 'korean', label: 'Korean Taekkyeon', level: 0, color: colors.group, shape: 'box' },
+            { id: 'filipino', label: 'Filipino Kali', level: 0, color: colors.group, shape: 'box' },
+
+            { id: 'ng', label: 'Ng Mui\n(Five Elders)', level: 1, color: colors.instructor },
+            { id: 'jee', label: 'Jee Sin Sim See\n(Five Elders)', level: 1, color: colors.instructor },
+            { id: 'yoshidahan', label: 'Samurai of the\nYoshidahan', level: 1, color: colors.group, shape: 'box' },
+            { id: 'kusanku', label: "Kūsankū\n(Ch'uan Fa)", level: 1, color: colors.instructor },
+            { id: 'chinto', label: 'Chintō (Annan)', level: 1, color: colors.instructor },
+            { id: 'hideya', label: 'Yamamoto Tamiza Hideya\n(Shin no Shinto-ryu)', level: 1, color: colors.instructor },
+            { id: 'yoshimitsu', label: 'Minamoto no Yoshimitsu\n(Daito-Ryu Founder)', level: 1, color: colors.icon },
+            { id: 'raifu', label: 'Hibino Raifu\n(Founder Shinto-Ryu)', level: 1, color: colors.icon },
+
+            { id: 'yim', label: 'Yim Wing-chun\n(Founder Wing Chun)', level: 2, color: colors.icon },
+            { id: 'hung', label: 'Hong Xiguan / Hung Hei-gun\n(Founder Hung Gar)', level: 2, color: colors.icon },
+            { id: 'kanga', label: 'Sakugawa Kanga', level: 2, color: colors.instructor },
+            { id: 'jouemon', label: 'Homma Jouemon', level: 2, color: colors.instructor },
+            { id: 'massaaki', label: 'Hibino Massaaki', level: 2, color: colors.instructor },
+            { id: 'sokaku', label: 'Takeda Sokaku', level: 2, color: colors.instructor },
+            { id: 'xinxian', label: 'Wai Xinxian / Ryū Ryū Ko\n(White Crane)', level: 2, color: colors.icon },
+
+            { id: 'bok', label: 'Leung Bok-chau', level: 3, color: colors.instructor },
+            { id: 'luk', label: 'Luk Ah-choy', level: 3, color: colors.instructor },
+            { id: 'sokon', label: 'Matsumura Sōkon', level: 3, color: colors.instructor },
+            { id: 'oribe', label: 'Hitotsuyanagi Oribe', level: 3, color: colors.instructor },
+            { id: 'iso', label: 'Iso Mataemon Masatari\n(Tenjin Shinyo Ryu)', level: 3, color: colors.instructor },
+            { id: 'masaharu', label: 'Hibino Masaharu', level: 3, color: colors.instructor },
+            { id: 'arakaki', label: 'Arakaki Seishō\n(Master of Tōde)', level: 3, color: colors.icon },
+            { id: 'zhongxiang', label: 'Xie Zhongxiang', level: 3, color: colors.instructor },
+            { id: 'taitei', label: 'Kojo Taitei', level: 3, color: colors.instructor },
+
+            { id: 'lan', label: 'Leung Lan-kwai', level: 4, color: colors.instructor },
+            { id: 'wong2', label: 'Wong Tai', level: 4, color: colors.instructor },
+            { id: 'itaso_asato_root', label: 'Ankō Asato', level: 4, color: colors.instructor },
+            { id: 'itosu', label: 'Ankō Itosu\n(Father of Modern Karate)', level: 4, color: colors.icon },
+            { id: 'kanryo', label: 'Higashionna Kanryō\n(Founder Naha-te)', level: 4, color: colors.icon },
+            { id: 'fukuda', label: 'Hachinosuke Fukuda', level: 4, color: colors.instructor },
+            { id: 'iso2', label: 'Iso Masatomo', level: 4, color: colors.instructor },
+            { id: 'osensei', label: "Morihei Ueshiba (O'Sensei)\nFounder Aikido", level: 4, color: colors.icon },
+            { id: 'shihan', label: 'Mochizuki Takashi\n(Hanshi, 8th Dan)', level: 4, color: colors.grandmaster },
+
+            { id: 'wong3', label: 'Wong Kay-ying', level: 5, color: colors.instructor },
+            { id: 'wong', label: 'Wong Wah-bo', level: 5, color: colors.instructor },
+            { id: 'gichin', label: 'Gichin Funakoshi\n(Founder Shotokan)', level: 5, color: colors.icon },
+            { id: 'choki', label: 'Motobu Chōki', level: 5, color: colors.instructor },
+            { id: 'chojun', label: 'Miyagi Chojun\n(Founder Goju-Ryu)', level: 5, color: colors.icon },
+            { id: 'maruta', label: 'Takeo Maruta', level: 5, color: colors.instructor },
+            { id: 'yogi', label: 'Jitsuei Yogi', level: 5, color: colors.instructor },
+            { id: 'kano', label: 'Kanō Jigorō\n(Founder Kōdōkan Jūdō)', level: 5, color: colors.icon },
+            { id: 'desc_osensei', label: "O'Sensei's Direct Students", level: 5, color: colors.group, shape: 'box' },
+            { id: 'hikitsuchi', label: 'Michio Hikitsuchi', level: 5, color: colors.instructor },
+            { id: 'pellett', label: 'Robby Pellett\n(6th Dan Shinto-Ryu)', level: 5, color: colors.instructor },
+
+            { id: 'wong4', label: 'Wong Fei-hung\n(Folk Hero)', level: 6, color: colors.famous },
+            { id: 'yee', label: 'Leung Yee-tai', level: 6, color: colors.instructor },
+            { id: 'ho', label: 'Kim Hyun Ho', level: 6, color: colors.instructor },
+            { id: 'wonkuk', label: 'Lee Won-kuk\n(Chung Do Kwan)', level: 6, color: colors.icon },
+            { id: 'ro', label: 'Byung Jik Ro\n(Song Moo Kwan)', level: 6, color: colors.icon },
+            { id: 'mitose', label: 'James Mitose', level: 6, color: colors.instructor },
+            { id: 'yamaguchi', label: 'Gogen Yamaguchi', level: 6, color: colors.famous },
+            { id: 'takahashi', label: 'Sensei Takahashi', level: 6, color: colors.instructor },
+            { id: 'mochizuki', label: 'Minoru Mochizuki', level: 6, color: colors.grandmaster },
+            { id: 'heiny', label: 'Mary Heiny', level: 6, color: colors.instructor },
+            { id: 'lau', label: 'Bernie Lau\n(Icho Ryu)', level: 6, color: colors.grandmaster },
+            { id: 'angier', label: 'Don Angier\n(Yanagi Ryu)', level: 6, color: colors.grandmaster },
+            { id: 'bluming', label: 'Jon Bluming\n(Kyokushin / Judo)', level: 6, color: colors.famous },
+            { id: 'harden', label: 'Dan Harden\n(Sangenkai)', level: 6, color: colors.grandmaster },
+            { id: 'presas', label: 'Ernesto Presas\n(Founder Kombatan)', level: 6, color: colors.icon },
+
+            { id: 'lam', label: 'Lam Sai-wing\n(Father of Hung Gar)', level: 7, color: colors.icon },
+            { id: 'jan', label: 'Leung Jan', level: 7, color: colors.instructor },
+            { id: 'hi', label: 'Choi Hong Hi\n(Founder Tae Kwon Do)', level: 7, color: colors.icon },
+            { id: 'taehi', label: 'Nam Tae Hi\n(Co-Founder TKD)', level: 7, color: colors.icon },
+            { id: 'kta', label: 'KTA Instructors', level: 7, color: colors.group, shape: 'box' },
+            { id: 'chow2', label: 'William Kwai-sun Chow', level: 7, color: colors.instructor },
+            { id: 'lebell', label: 'Gene LeBell', level: 7, color: colors.instructor },
+            { id: 'pierce', label: 'Donovan Pierce', level: 7, color: colors.instructor },
+            { id: 'richardson', label: 'Kimberly Richardson', level: 7, color: colors.instructor },
+            { id: 'yamamoto', label: 'Neil Yamamoto', level: 7, color: colors.instructor },
+            { id: 'brocka', label: 'J. Cui Brocka', level: 7, color: colors.instructor },
+            { id: 'yip3', label: 'Mr. Yip\n(Tan Tui Wushu)', level: 7, color: colors.instructor },
+            { id: 'yip4', label: 'Mrs. Yip\n(Performative Wushu)', level: 7, color: colors.instructor },
+
+            { id: 'wong5', label: 'Wong Lee', level: 8, color: colors.instructor },
+            { id: 'chow', label: 'Raymond Chow\n(Producer)', level: 8, color: colors.famous },
+            { id: 'chan', label: 'Chan Wah-shun', level: 8, color: colors.instructor },
+            { id: 'bik', label: 'Leung Bik', level: 8, color: colors.instructor },
+            { id: 'rhee', label: 'Jhoon Rhee\n(Father of US TKD)', level: 8, color: colors.famous },
+            { id: 'kyu', label: 'Han Chai Kyu\n(Sung Mu Kwon)', level: 8, color: colors.grandmaster },
+            { id: 'kukkiwon', label: 'Kukkiwon Instructors', level: 8, color: colors.group, shape: 'box' },
+            { id: 'parker', label: 'Edmund Parker\n(American Kenpo)', level: 8, color: colors.famous },
+            { id: 'worden', label: 'Kelly Worden\n(Modern Arnis)', level: 8, color: colors.grandmaster },
+            { id: 'yi', label: 'Fung Yi', level: 8, color: colors.instructor },
+            { id: 'yip2', label: 'Ms. Yip\n(Goju Ryu)', level: 8, color: colors.instructor },
+            { id: 'kinney', label: 'Paul Kinney Jr.', level: 8, color: colors.instructor },
+            { id: 'chen', label: 'Chen Xiaowang\n(Grandmaster 9th Duan Wei)', level: 8, color: colors.grandmaster },
+            { id: 'floss', label: 'Helmut Floss\n(4th Dan Aikido)', level: 8, color: colors.instructor },
+            { id: 'moses', label: 'Chris Moses\n(Menkyo Budo Tanren)', level: 8, color: colors.instructor },
+            { id: 'hulley', label: 'Jeremy Hulley\n(Okuden Budo Tanren)', level: 8, color: colors.instructor },
+
+            { id: 'leong', label: 'John S.S. Leong\n(Seattle Kung Fu)', level: 9, color: colors.grandmaster },
+            { id: 'ip', label: 'Ip Man\n(Father of Wing Chun)', level: 9, color: colors.icon },
+            { id: 'chung', label: 'John Chung\n(9th Dan ITF)', level: 9, color: colors.grandmaster },
+            { id: 'yongin', label: 'TKD Instructors\nYong In Univ', level: 9, color: colors.group, shape: 'box' },
+            { id: 'palanzo', label: 'Joe Palanzo\n(10th Dan Kenpo)', level: 9, color: colors.instructor },
+            { id: 'arsenault', label: 'Steve Arsenault\n(10th Dan Kenpo)', level: 9, color: colors.instructor },
+            { id: 'hebler', label: 'Dave Hebler\n(10th Dan Kenpo)', level: 9, color: colors.instructor },
+            { id: 'rainey', label: 'Asa Rainey\n(10th Dan Kenpo)', level: 9, color: colors.instructor },
+            { id: 'willis', label: 'Derryl Willis\n(6th Duan Wei)', level: 9, color: colors.instructor },
+            { id: 'yip', label: 'Phil Yip / Yip Baowei\nFounder ZMA\nHanshi, 10th Dan ZMA', level: 9, color: colors.hanshi },
+            { id: 'sakahara', label: 'Steve Sakahara\n(Okuden Budo Tanren)', level: 9, color: colors.instructor },
+            { id: 'huberth', label: 'Robert M Huberth\n(Okuden Budo Tanren)', level: 9, color: colors.instructor },
+            { id: 'kil', label: 'James Takayama\n(2nd Dan Shinto-Ryu)', level: 9, color: colors.instructor },
+            { id: 'walker', label: 'Eric Walker\n(1st Dan Shinto-Ryu)', level: 9, color: colors.instructor },
+
+            { id: 'yamada', label: 'Yamada', level: 10, color: colors.instructor },
+            { id: 'cheung', label: 'William Cheung', level: 10, color: colors.grandmaster },
+            { id: 'lee', label: 'Bruce Lee\n(Jeet Kune Do)', level: 10, color: colors.famous },
+            { id: 'yoo', label: 'Haesung Yoo\n(7th Dan TKD)', level: 10, color: colors.grandmaster },
+            { id: 'macdonald', label: 'Brian MacDonald\n(8th Dan Kenpo)', level: 10, color: colors.instructor },
+            { id: 'durgan', label: 'Todd Durgan\n(10th Dan Kenpo)', level: 10, color: colors.instructor },
+            { id: 'miller', label: 'Diane Miller\nCo-Founder ZMA\nRenshi, Honorary 6th Dan ZMA', level: 10, color: colors.renshi },
+            { id: 'stillwagon', label: 'Richard Stillwagon\nFounder Living Arts\nHanshi, 7th Dan Living Arts', level: 10, color: colors.hanshi },
+            { id: 'frost', label: 'Andrew Frost\n3rd Dan ZMA', level: 10, color: colors.dan },
+            { id: 'mcmonnies', label: 'Chris McMonnies\n3rd Dan ZMA', level: 10, color: colors.dan },
+            { id: 'garcia', label: 'Gus Garcia\n1st Dan ZMA', level: 10, color: colors.dan },
+            { id: 'lonning', label: 'Len Lonning\nHonorary 1st Dan ZMA', level: 10, color: colors.dan },
+            { id: 'hokensen', label: 'Pete Hokensen\n1st Dan ZMA', level: 10, color: colors.dan },
+            { id: 'quall', label: 'Matt Quall\n1st Dan ZMA', level: 10, color: colors.dan },
+            { id: 'floyd', label: 'Leanard Floyd\n1st Dan ZMA', level: 10, color: colors.dan },
+
+            { id: 'masaoka', label: 'Ben Masaoka\n(Okuden Budo Tanren)', level: 11, color: colors.instructor },
+            { id: 'tolvis', label: 'Frank Tolvis', level: 11, color: colors.instructor },
+            { id: 'yoo2', label: 'Kimmer Yoo\n(4th Dan TKD)', level: 11, color: colors.instructor },
+            { id: 'herrman', label: 'Chris Herrman\n(6th Dan Kenpo)', level: 11, color: colors.instructor },
+            { id: 'diloreto', label: 'Greg Di Loreto\nKyoshi, 5th Dan ZMA', level: 11, color: colors.kyoshi },
+            { id: 'hong', label: 'Clem Hong\nRenshi, 4th Dan ZMA', level: 11, color: colors.renshi },
+            { id: 'windisch', label: 'Johanna Windisch\n3rd Dan ZMA', level: 11, color: colors.dan },
+            { id: 'bucy', label: 'Evan Bucy Seders\n(Okuden Budo Tanren)', level: 11, color: colors.instructor },
+            { id: 'fiorito', label: 'Zak Fiorito\n(Okuden Budo Tanren)', level: 11, color: colors.instructor },
+            { id: 'stillwagon2', label: 'Kelsea Stillwagon Coths\n(3rd Dan Living Arts)', level: 11, color: colors.dan },
+            { id: 'stillwagon3', label: 'Daniel Stillwagon\n(1st Kyū Living Arts)', level: 11, color: colors.default },
+            { id: 'coths', label: 'Nate Coths\n(2nd Dan Living Arts)', level: 11, color: colors.dan },
+            { id: 'gonzales', label: 'Eli Gonzalez\n1st Kyū ZMA', level: 11, color: colors.default },
+
+            { id: 'kim', label: 'Sean Kim\n(4th Dan TKD)', level: 12, color: colors.instructor },
+            { id: 'kim2', label: 'Lauren Kim\n(4th Dan TKD)', level: 12, color: colors.instructor },
+            { id: 'reilly', label: 'Michael Reilly\n(4th Dan Kenpo)', level: 12, color: colors.instructor },
+            { id: 'swartwood', label: 'James Swartwood\nRenshi, 4th Dan ZMA', level: 12, color: colors.renshi },
+            { id: 'swartwood2', label: 'Troy Swartwood\n2nd Dan ZMA', level: 12, color: colors.dan },
+            { id: 'vahey', label: 'Paul Vahey\n2nd Dan ZMA', level: 12, color: colors.dan },
+            { id: 'vahey2', label: 'Timothy Vahey\n1st Kyū ZMA', level: 12, color: colors.default },
+            { id: 'hartz', label: 'Doug Hartz\n2nd Dan ZMA', level: 12, color: colors.dan },
+            { id: 'michaels', label: 'Miriam Michaels\n(1st Dan Living Arts)', level: 12, color: colors.dan },
+            { id: 'johnson', label: 'Matthew Johnson\n(1st Dan Living Arts)', level: 12, color: colors.dan },
+            { id: 'darnell', label: 'Gabriel Darnell\n(1st Dan Living Arts)', level: 12, color: colors.dan },
+
+            { id: 'diloreto2', label: 'Gianna Di Loreto\n1st Dan ZMA', level: 13, color: colors.dan },
+            { id: 'young', label: 'Chad Young\n1st Dan ZMA', level: 13, color: colors.dan },
+            { id: 'young2', label: 'Michelle Young\n1st Kyū ZMA', level: 13, color: colors.default },
+            { id: 'price', label: 'Becca Price\n1st Kyū ZMA', level: 13, color: colors.default },
+            { id: 'young3', label: 'Azalea Young\n3rd Kyū ZMA', level: 13, color: colors.default },
+            { id: 'li', label: 'Li Meijie / Aletta Li\nJōkyū ZMA', level: 13, color: colors.default },
+            { id: 'tideman', label: 'Devin Tideman\nShokyū ZMA', level: 13, color: colors.default },
+            { id: 'fadiman', label: 'Dashiell Fadiman\nJr. Black Belt Kenpo\nShokyū ZMA', level: 13, color: colors.instructor }
+        ];
+
+        // Edges List
+        const rawEdges = [
+            { id: 'e_chinese_kusanku', from: 'chinese', to: 'kusanku', dashes: true },
+            { id: 'e_chinese_xinxian', from: 'chinese', to: 'xinxian', dashes: true },
+            { id: 'e_chinese_ng', from: 'chinese', to: 'ng', dashes: true },
+            { id: 'e_chinese_harden', from: 'chinese', to: 'harden', dashes: true },
+            { id: 'e_chinese_chinto', from: 'chinese', to: 'chinto', dashes: true },
+            { id: 'e_chinese_jee', from: 'chinese', to: 'jee', dashes: true },
+            { id: 'e_chinese_chen', from: 'chinese', to: 'chen', dashes: true },
+            { id: 'e_chinese_yip3', from: 'chinese', to: 'yip3', dashes: true },
+            { id: 'e_chinese_yip4', from: 'chinese', to: 'yip4', dashes: true },
+
+            { id: 'e_japanese_raifu', from: 'japanese', to: 'raifu', dashes: true },
+            { id: 'e_japanese_yoshidahan', from: 'japanese', to: 'yoshidahan', dashes: true },
+            { id: 'e_japanese_yoshimitsu', from: 'japanese', to: 'yoshimitsu', dashes: true },
+            { id: 'e_japanese_osensei', from: 'japanese', to: 'osensei', dashes: true },
+            { id: 'e_japanese_maruta', from: 'japanese', to: 'maruta', dashes: true },
+            { id: 'e_japanese_yogi', from: 'japanese', to: 'yogi', dashes: true },
+            { id: 'e_japanese_taitei', from: 'japanese', to: 'taitei', dashes: true },
+            { id: 'e_japanese_zhongxiang', from: 'japanese', to: 'zhongxiang', dashes: true },
+            { id: 'e_japanese_ho', from: 'japanese', to: 'ho', dashes: true },
+            { id: 'e_japanese_hideya', from: 'japanese', to: 'hideya', dashes: true },
+            { id: 'e_japanese_oribe', from: 'japanese', to: 'oribe', dashes: true },
+
+            { id: 'e_korean_kukkiwon', from: 'korean', to: 'kukkiwon', dashes: true },
+            { id: 'e_filipino_presas', from: 'filipino', to: 'presas', dashes: true },
+
+            { id: 'e_ng_yim', from: 'ng', to: 'yim' },
+            { id: 'e_yim_bok', from: 'yim', to: 'bok' },
+            { id: 'e_bok_lan', from: 'bok', to: 'lan' },
+            { id: 'e_lan_wong', from: 'lan', to: 'wong' },
+            { id: 'e_wong_yee', from: 'wong', to: 'yee' },
+            { id: 'e_yee_jan', from: 'yee', to: 'jan' },
+            { id: 'e_jan_chan', from: 'jan', to: 'chan' },
+            { id: 'e_jan_bik', from: 'jan', to: 'bik' },
+            { id: 'e_chan_ip', from: 'chan', to: 'ip' },
+            { id: 'e_bik_ip', from: 'bik', to: 'ip' },
+            { id: 'e_ip_cheung', from: 'ip', to: 'cheung' },
+            { id: 'e_ip_lee', from: 'ip', to: 'lee' },
+            { id: 'e_cheung_tolvis', from: 'cheung', to: 'tolvis' },
+            { id: 'e_tolvis_stillwagon', from: 'tolvis', to: 'stillwagon' },
+
+            { id: 'e_jee_hung', from: 'jee', to: 'hung' },
+            { id: 'e_hung_luk', from: 'hung', to: 'luk' },
+            { id: 'e_luk_wong2', from: 'luk', to: 'wong2' },
+            { id: 'e_luk_wong3', from: 'luk', to: 'wong3' },
+            { id: 'e_wong2_wong3', from: 'wong2', to: 'wong3' },
+            { id: 'e_wong3_wong4', from: 'wong3', to: 'wong4' },
+            { id: 'e_wong4_lam', from: 'wong4', to: 'lam' },
+            { id: 'e_lam_wong5', from: 'lam', to: 'wong5' },
+            { id: 'e_lam_chow', from: 'lam', to: 'chow' },
+            { id: 'e_wong5_leong', from: 'wong5', to: 'leong' },
+            { id: 'e_leong_yamada', from: 'leong', to: 'yamada' },
+            { id: 'e_yamada_masaoka', from: 'yamada', to: 'masaoka' },
+
+            { id: 'e_kusanku_kanga', from: 'kusanku', to: 'kanga' },
+            { id: 'e_kanga_sokon', from: 'kanga', to: 'sokon' },
+            { id: 'e_chinto_sokon', from: 'chinto', to: 'sokon' },
+            { id: 'e_sokon_itosu', from: 'sokon', to: 'itosu' },
+            { id: 'e_sokon_asato', from: 'sokon', to: 'itaso_asato_root' },
+            { id: 'e_sokon_gichin', from: 'sokon', to: 'gichin' },
+            { id: 'e_sokon_choki', from: 'sokon', to: 'choki' },
+            { id: 'e_itosu_gichin', from: 'itosu', to: 'gichin' },
+            { id: 'e_itosu_choki', from: 'itosu', to: 'choki' },
+            { id: 'e_asato_gichin', from: 'itaso_asato_root', to: 'gichin' },
+            { id: 'e_xinxian_arakaki', from: 'xinxian', to: 'arakaki' },
+            { id: 'e_xinxian_kanryo', from: 'xinxian', to: 'kanryo' },
+            { id: 'e_zhongxiang_kanryo', from: 'zhongxiang', to: 'kanryo' },
+            { id: 'e_taitei_kanryo', from: 'taitei', to: 'kanryo' },
+            { id: 'e_arakaki_kanryo', from: 'arakaki', to: 'kanryo' },
+            { id: 'e_arakaki_chojun', from: 'arakaki', to: 'chojun' },
+            { id: 'e_arakaki_gichin', from: 'arakaki', to: 'gichin' },
+            { id: 'e_kanryo_chojun', from: 'kanryo', to: 'chojun' },
+            { id: 'e_chojun_yamaguchi', from: 'chojun', to: 'yamaguchi' },
+            { id: 'e_chojun_takahashi', from: 'chojun', to: 'takahashi' },
+            { id: 'e_maruta_yamaguchi', from: 'maruta', to: 'yamaguchi' },
+            { id: 'e_yogi_yamaguchi', from: 'yogi', to: 'yamaguchi' },
+            { id: 'e_yamaguchi_takahashi', from: 'yamaguchi', to: 'takahashi' },
+            { id: 'e_yamaguchi_bluming', from: 'yamaguchi', to: 'bluming' },
+            { id: 'e_yamaguchi_yip2', from: 'yamaguchi', to: 'yip2' },
+            { id: 'e_takahashi_yip', from: 'takahashi', to: 'yip' },
+
+            { id: 'e_hideya_jouemon', from: 'hideya', to: 'jouemon' },
+            { id: 'e_jouemon_iso', from: 'jouemon', to: 'iso' },
+            { id: 'e_oribe_iso', from: 'oribe', to: 'iso' },
+            { id: 'e_iso_iso2', from: 'iso', to: 'iso2', dashes: true },
+            { id: 'e_iso_fukuda', from: 'iso', to: 'fukuda', dashes: true },
+            { id: 'e_fukuda_kano', from: 'fukuda', to: 'kano' },
+            { id: 'e_iso2_kano', from: 'iso2', to: 'kano' },
+            { id: 'e_kano_yi', from: 'kano', to: 'yi' },
+            { id: 'e_kano_mochizuki', from: 'kano', to: 'mochizuki' },
+            { id: 'e_kano_kinney', from: 'kano', to: 'kinney', dashes: true },
+            { id: 'e_kano_bluming', from: 'kano', to: 'bluming', dashes: true },
+            { id: 'e_kano_lebell', from: 'kano', to: 'lebell', dashes: true },
+            { id: 'e_yi_yip', from: 'yi', to: 'yip' },
+            { id: 'e_kinney_masaoka', from: 'kinney', to: 'masaoka' },
+
+            { id: 'e_yoshimitsu_sokaku', from: 'yoshimitsu', to: 'sokaku' },
+            { id: 'e_sokaku_osensei', from: 'sokaku', to: 'osensei' },
+            { id: 'e_sokaku_harden', from: 'sokaku', to: 'harden', dashes: true },
+            { id: 'e_osensei_desc_osensei', from: 'osensei', to: 'desc_osensei' },
+            { id: 'e_osensei_hikitsuchi', from: 'osensei', to: 'hikitsuchi' },
+            { id: 'e_osensei_mochizuki', from: 'osensei', to: 'mochizuki' },
+            { id: 'e_desc_osensei_heiny', from: 'desc_osensei', to: 'heiny' },
+            { id: 'e_desc_osensei_lau', from: 'desc_osensei', to: 'lau' },
+            { id: 'e_desc_osensei_pierce', from: 'desc_osensei', to: 'pierce', dashes: true },
+            { id: 'e_hikitsuchi_heiny', from: 'hikitsuchi', to: 'heiny' },
+            { id: 'e_heiny_richardson', from: 'heiny', to: 'richardson' },
+            { id: 'e_lau_yamamoto', from: 'lau', to: 'yamamoto' },
+            { id: 'e_bluming_yamamoto', from: 'bluming', to: 'yamamoto' },
+            { id: 'e_yoshidahan_angier', from: 'yoshidahan', to: 'angier', dashes: true },
+            { id: 'e_angier_yamamoto', from: 'angier', to: 'yamamoto' },
+            { id: 'e_raifu_massaaki', from: 'raifu', to: 'massaaki' },
+            { id: 'e_massaaki_masaharu', from: 'massaaki', to: 'masaharu' },
+            { id: 'e_masaharu_shihan', from: 'masaharu', to: 'shihan' },
+            { id: 'e_shihan_pellett', from: 'shihan', to: 'pellett' },
+            { id: 'e_mochizuki_pellett', from: 'mochizuki', to: 'pellett' },
+
+            { id: 'e_pellett_moses', from: 'pellett', to: 'moses' },
+            { id: 'e_pellett_hulley', from: 'pellett', to: 'hulley' },
+            { id: 'e_pierce_moses', from: 'pierce', to: 'moses' },
+            { id: 'e_pierce_hulley', from: 'pierce', to: 'hulley' },
+            { id: 'e_richardson_moses', from: 'richardson', to: 'moses' },
+            { id: 'e_richardson_hulley', from: 'richardson', to: 'hulley' },
+            { id: 'e_richardson_floss', from: 'richardson', to: 'floss' },
+            { id: 'e_richardson_bucy', from: 'richardson', to: 'bucy' },
+            { id: 'e_yamamoto_moses', from: 'yamamoto', to: 'moses' },
+            { id: 'e_yamamoto_hulley', from: 'yamamoto', to: 'hulley' },
+            { id: 'e_yamamoto_bucy', from: 'yamamoto', to: 'bucy' },
+            { id: 'e_floss_bucy', from: 'floss', to: 'bucy' },
+            { id: 'e_harden_moses', from: 'harden', to: 'moses' },
+            { id: 'e_harden_hulley', from: 'harden', to: 'hulley' },
+            { id: 'e_harden_sakahara', from: 'harden', to: 'sakahara' },
+            { id: 'e_harden_masaoka', from: 'harden', to: 'masaoka' },
+            { id: 'e_harden_bucy', from: 'harden', to: 'bucy' },
+            { id: 'e_harden_fiorito', from: 'harden', to: 'fiorito' },
+            { id: 'e_moses_bucy', from: 'moses', to: 'bucy' },
+            { id: 'e_moses_swartwood', from: 'moses', to: 'swartwood' },
+            { id: 'e_moses_huberth', from: 'moses', to: 'huberth' },
+            { id: 'e_moses_kil', from: 'moses', to: 'kil' },
+            { id: 'e_moses_fiorito', from: 'moses', to: 'fiorito' },
+            { id: 'e_moses_walker', from: 'moses', to: 'walker' },
+            { id: 'e_moses_li', from: 'moses', to: 'li' },
+            { id: 'e_moses_tideman', from: 'moses', to: 'tideman' },
+            { id: 'e_hulley_bucy', from: 'hulley', to: 'bucy' },
+            { id: 'e_hulley_swartwood', from: 'hulley', to: 'swartwood' },
+            { id: 'e_hulley_fiorito', from: 'hulley', to: 'fiorito' },
+            { id: 'e_hulley_kil', from: 'hulley', to: 'kil' },
+            { id: 'e_hulley_walker', from: 'hulley', to: 'walker' },
+            { id: 'e_sakahara_swartwood', from: 'sakahara', to: 'swartwood' },
+            { id: 'e_masaoka_swartwood', from: 'masaoka', to: 'swartwood' },
+            { id: 'e_bucy_swartwood', from: 'bucy', to: 'swartwood' },
+            { id: 'e_bucy_li', from: 'bucy', to: 'li' },
+            { id: 'e_bucy_tideman', from: 'bucy', to: 'tideman' },
+            { id: 'e_fiorito_swartwood', from: 'fiorito', to: 'swartwood' },
+            { id: 'e_fiorito_li', from: 'fiorito', to: 'li' },
+            { id: 'e_fiorito_tideman', from: 'fiorito', to: 'tideman' },
+
+            { id: 'e_ho_hi', from: 'ho', to: 'hi' },
+            { id: 'e_gichin_hi', from: 'gichin', to: 'hi' },
+            { id: 'e_gichin_mochizuki', from: 'gichin', to: 'mochizuki' },
+            { id: 'e_gichin_wonkuk', from: 'gichin', to: 'wonkuk' },
+            { id: 'e_gichin_ro', from: 'gichin', to: 'ro' },
+            { id: 'e_wonkuk_taehi', from: 'wonkuk', to: 'taehi' },
+            { id: 'e_taehi_rhee', from: 'taehi', to: 'rhee' },
+            { id: 'e_taehi_kyu', from: 'taehi', to: 'kyu' },
+            { id: 'e_taehi_kta', from: 'taehi', to: 'kta' },
+            { id: 'e_hi_kyu', from: 'hi', to: 'kyu' },
+            { id: 'e_hi_kta', from: 'hi', to: 'kta' },
+            { id: 'e_ro_kyu', from: 'ro', to: 'kyu' },
+            { id: 'e_kta_kukkiwon', from: 'kta', to: 'kukkiwon', dashes: true },
+            { id: 'e_kukkiwon_yongin', from: 'kukkiwon', to: 'yongin', dashes: true },
+            { id: 'e_yongin_yoo', from: 'yongin', to: 'yoo' },
+            { id: 'e_yoo_yoo2', from: 'yoo', to: 'yoo2' },
+            { id: 'e_yoo_kim', from: 'yoo', to: 'kim' },
+            { id: 'e_yoo_kim2', from: 'yoo', to: 'kim2' },
+            { id: 'e_yoo2_kim', from: 'yoo2', to: 'kim' },
+            { id: 'e_yoo2_kim2', from: 'yoo2', to: 'kim2' },
+            { id: 'e_rhee_chung', from: 'rhee', to: 'chung' },
+            { id: 'e_kyu_yip', from: 'kyu', to: 'yip' },
+
+            { id: 'e_chen_willis', from: 'chen', to: 'willis' },
+            { id: 'e_willis_diloreto', from: 'willis', to: 'diloreto' },
+
+            { id: 'e_presas_brocka', from: 'presas', to: 'brocka' },
+            { id: 'e_brocka_worden', from: 'brocka', to: 'worden' },
+            { id: 'e_worden_mcmonnies', from: 'worden', to: 'mcmonnies' },
+
+            { id: 'e_choki_mitose', from: 'choki', to: 'mitose' },
+            { id: 'e_mitose_chow2', from: 'mitose', to: 'chow2' },
+            { id: 'e_chow2_parker', from: 'chow2', to: 'parker' },
+            { id: 'e_lebell_parker', from: 'lebell', to: 'parker' },
+            { id: 'e_parker_palanzo', from: 'parker', to: 'palanzo' },
+            { id: 'e_parker_arsenault', from: 'parker', to: 'arsenault' },
+            { id: 'e_parker_hebler', from: 'parker', to: 'hebler' },
+            { id: 'e_parker_rainey', from: 'parker', to: 'rainey' },
+            { id: 'e_palanzo_macdonald', from: 'palanzo', to: 'macdonald' },
+            { id: 'e_arsenault_macdonald', from: 'arsenault', to: 'macdonald' },
+            { id: 'e_macdonald_herrman', from: 'macdonald', to: 'herrman' },
+            { id: 'e_herrman_reilly', from: 'herrman', to: 'reilly' },
+            { id: 'e_reilly_fadiman', from: 'reilly', to: 'fadiman' },
+            { id: 'e_hebler_rainey', from: 'hebler', to: 'rainey' },
+            { id: 'e_rainey_durgan', from: 'rainey', to: 'durgan' },
+            { id: 'e_durgan_fadiman', from: 'durgan', to: 'fadiman' },
+
+            { id: 'e_yip3_yip', from: 'yip3', to: 'yip' },
+            { id: 'e_yip3_yip2', from: 'yip3', to: 'yip2' },
+            { id: 'e_yip4_yip', from: 'yip4', to: 'yip' },
+            { id: 'e_yip4_yip2', from: 'yip4', to: 'yip2' },
+            { id: 'e_yip2_yip', from: 'yip2', to: 'yip' },
+            { id: 'e_yip_stillwagon', from: 'yip', to: 'stillwagon' },
+            { id: 'e_yip_diloreto', from: 'yip', to: 'diloreto' },
+            { id: 'e_yip_hong', from: 'yip', to: 'hong' },
+            { id: 'e_yip_windisch', from: 'yip', to: 'windisch' },
+            { id: 'e_yip_miller', from: 'yip', to: 'miller' },
+            { id: 'e_yip_frost', from: 'yip', to: 'frost' },
+            { id: 'e_yip_hokensen', from: 'yip', to: 'hokensen' },
+            { id: 'e_yip_quall', from: 'yip', to: 'quall' },
+            { id: 'e_yip_mcmonnies', from: 'yip', to: 'mcmonnies' },
+            { id: 'e_yip_garcia', from: 'yip', to: 'garcia' },
+            { id: 'e_yip_floyd', from: 'yip', to: 'floyd' },
+            { id: 'e_yip_lonning', from: 'yip', to: 'lonning' },
+            { id: 'e_yip_gonzales', from: 'yip', to: 'gonzales' },
+            { id: 'e_miller_diloreto', from: 'miller', to: 'diloreto' },
+            { id: 'e_miller_hong', from: 'miller', to: 'hong' },
+            { id: 'e_miller_windisch', from: 'miller', to: 'windisch' },
+            { id: 'e_hong_hartz', from: 'hong', to: 'hartz' },
+
+            { id: 'e_stillwagon_diloreto', from: 'stillwagon', to: 'diloreto' },
+            { id: 'e_stillwagon_stillwagon2', from: 'stillwagon', to: 'stillwagon2' },
+            { id: 'e_stillwagon_stillwagon3', from: 'stillwagon', to: 'stillwagon3' },
+            { id: 'e_stillwagon_coths', from: 'stillwagon', to: 'coths' },
+            { id: 'e_stillwagon_hong', from: 'stillwagon', to: 'hong' },
+            { id: 'e_stillwagon_windisch', from: 'stillwagon', to: 'windisch' },
+            { id: 'e_stillwagon_gonzales', from: 'stillwagon', to: 'gonzales' },
+            { id: 'e_stillwagon_michaels', from: 'stillwagon', to: 'michaels' },
+            { id: 'e_stillwagon_johnson', from: 'stillwagon', to: 'johnson' },
+            { id: 'e_stillwagon_darnell', from: 'stillwagon', to: 'darnell' },
+            { id: 'e_stillwagon2_diloreto2', from: 'stillwagon2', to: 'diloreto2' },
+
+            { id: 'e_diloreto_swartwood', from: 'diloreto', to: 'swartwood' },
+            { id: 'e_diloreto_swartwood2', from: 'diloreto', to: 'swartwood2' },
+            { id: 'e_diloreto_vahey', from: 'diloreto', to: 'vahey' },
+            { id: 'e_diloreto_vahey2', from: 'diloreto', to: 'vahey2' },
+            { id: 'e_diloreto_diloreto2', from: 'diloreto', to: 'diloreto2' },
+            { id: 'e_diloreto_young', from: 'diloreto', to: 'young' },
+            { id: 'e_diloreto_young2', from: 'diloreto', to: 'young2' },
+            { id: 'e_diloreto_price', from: 'diloreto', to: 'price' },
+            { id: 'e_diloreto_young3', from: 'diloreto', to: 'young3' },
+            { id: 'e_diloreto_li', from: 'diloreto', to: 'li' },
+            { id: 'e_diloreto_fadiman', from: 'diloreto', to: 'fadiman' },
+
+            { id: 'e_swartwood_diloreto2', from: 'swartwood', to: 'diloreto2' },
+            { id: 'e_swartwood_young', from: 'swartwood', to: 'young' },
+            { id: 'e_swartwood_young2', from: 'swartwood', to: 'young2' },
+            { id: 'e_swartwood_price', from: 'swartwood', to: 'price' },
+            { id: 'e_swartwood_fadiman', from: 'swartwood', to: 'fadiman' },
+            { id: 'e_swartwood_young3', from: 'swartwood', to: 'young3' },
+            { id: 'e_swartwood_li', from: 'swartwood', to: 'li' },
+            { id: 'e_swartwood_tideman', from: 'swartwood', to: 'tideman' },
+
+            { id: 'e_swartwood2_young3', from: 'swartwood2', to: 'young3' },
+            { id: 'e_vahey_young3', from: 'vahey', to: 'young3' }
+        ];
+
+        // Ensure Level Integrity for Default Hierarchy
+        const nodeMap = {};
+        rawNodes.forEach(n => { nodeMap[n.id] = n; });
+
+        let adjusted = true;
+        while (adjusted) {
+            adjusted = false;
+            rawEdges.forEach(e => {
+                const parent = nodeMap[e.from];
+                const child = nodeMap[e.to];
+                if (parent && child && child.level <= parent.level) {
+                    child.level = parent.level + 1;
+                    adjusted = true;
+                }
+            });
+        }
+
+        // Layered Crossing Minimization Algorithm
+        function optimizeLayerOrder(nodes, edges) {
+            const layers = {};
+            nodes.forEach(n => {
+                if (!layers[n.level]) layers[n.level] = [];
+                layers[n.level].push(n.id);
+            });
+
+            const maxLevel = Math.max(...Object.keys(layers).map(Number));
+            const positions = {};
+
+            Object.keys(layers).forEach(lvl => {
+                layers[lvl].forEach((id, idx) => { positions[id] = idx; });
+            });
+
+            const inEdges = {}, outEdges = {};
+            edges.forEach(e => {
+                if (!outEdges[e.from]) outEdges[e.from] = [];
+                if (!inEdges[e.to]) inEdges[e.to] = [];
+                outEdges[e.from].push(e.to);
+                inEdges[e.to].push(e.from);
+            });
+
+            for (let iter = 0; iter < 12; iter++) {
+                for (let lvl = 1; lvl <= maxLevel; lvl++) {
+                    const layer = layers[lvl] || [];
+                    layer.sort((a, b) => {
+                        const pA = inEdges[a] || [];
+                        const pB = inEdges[b] || [];
+                        const avgA = pA.length ? pA.reduce((sum, p) => sum + (positions[p] ?? 0), 0) / pA.length : positions[a];
+                        const avgB = pB.length ? pB.reduce((sum, p) => sum + (positions[p] ?? 0), 0) / pB.length : positions[b];
+                        return avgA - avgB;
+                    });
+                    layer.forEach((id, idx) => { positions[id] = idx; });
+                }
+
+                for (let lvl = maxLevel - 1; lvl >= 0; lvl--) {
+                    const layer = layers[lvl] || [];
+                    layer.sort((a, b) => {
+                        const cA = outEdges[a] || [];
+                        const cB = outEdges[b] || [];
+                        const avgA = cA.length ? cA.reduce((sum, c) => sum + (positions[c] ?? 0), 0) / cA.length : positions[a];
+                        const avgB = cB.length ? cB.reduce((sum, c) => sum + (positions[c] ?? 0), 0) / cB.length : positions[b];
+                        return avgA - avgB;
+                    });
+                    layer.forEach((id, idx) => { positions[id] = idx; });
+                }
+            }
+
+            const orderedNodes = [];
+            Object.keys(layers).sort((a, b) => a - b).forEach(lvl => {
+                layers[lvl].forEach(id => {
+                    orderedNodes.push(nodes.find(n => n.id === id));
+                });
+            });
+            return orderedNodes;
+        }
+
+        const optimizedDefaultNodes = optimizeLayerOrder(rawNodes, rawEdges);
+
+        // Prepare Vis Node Items
+        function formatNodeData(node, levelOverride = null) {
+            return {
+                id: node.id,
+                label: node.label,
+                level: levelOverride !== null ? levelOverride : node.level,
+                shape: node.shape || 'box',
+                margin: { top: 12, bottom: 12, left: 16, right: 16 },
+                color: {
+                    background: node.color,
+                    border: '#3f444e',
+                    highlight: {
+                        background: '#ffffff',
+                        border: '#ff4a4a'
+                    }
+                },
+                font: {
+                    color: '#111827',
+                    face: 'Helvetica, Arial, sans-serif',
+                    size: 13,
+                    bold: { mod: 'bold' }
+                },
+                borderWidth: 1.5,
+                shadow: {
+                    enabled: true,
+                    color: 'rgba(0,0,0,0.4)',
+                    size: 8,
+                    x: 0,
+                    y: 3
+                }
+            };
+        }
+
+        // Format Edges with Progressive Curvature
+        const edgeTracker = {};
+        const formattedDefaultEdges = rawEdges.map(edge => {
+            const groupKey = `${edge.from}`;
+            edgeTracker[groupKey] = (edgeTracker[groupKey] || 0) + 1;
+            const count = edgeTracker[groupKey];
+            const roundnessValue = 0.2 + ((count % 5) * 0.08);
+
+            return {
+                id: edge.id,
+                from: edge.from,
+                to: edge.to,
+                dashes: !!edge.dashes,
+                color: {
+                    color: '#4b5563',
+                    opacity: 0.8
+                },
+                width: 1.5,
+                arrows: {
+                    to: {
+                        enabled: true,
+                        scaleFactor: 0.65
+                    }
+                },
+                smooth: {
+                    enabled: true,
+                    type: 'cubicBezier',
+                    forceDirection: 'vertical',
+                    roundness: roundnessValue
+                }
+            };
+        });
+
+        // Vis DataSets
+        const nodesDataSet = new vis.DataSet(optimizedDefaultNodes.map(n => formatNodeData(n)));
+        const edgesDataSet = new vis.DataSet(formattedDefaultEdges);
+
+        const container = document.getElementById('network-container');
+        const data = { nodes: nodesDataSet, edges: edgesDataSet };
+        const defaultOptions = {
+            layout: {
+                hierarchical: {
+                    enabled: true,
+                    direction: 'UD',
+                    sortMethod: 'directed',
+                    levelSeparation: 200,
+                    nodeSpacing: 300,
+                    treeSpacing: 320,
+                    blockShifting: true,
+                    edgeMinimization: true,
+                    parentCentralization: true
+                }
+            },
+            physics: {
+                hierarchicalRepulsion: {
+                    centralGravity: 0.0,
+                    springLength: 140,
+                    springConstant: 0.01,
+                    nodeDistance: 310,
+                    damping: 0.09
+                },
+                solver: 'hierarchicalRepulsion'
+            },
+            interaction: {
+                hover: true,
+                dragNodes: true,
+                zoomView: true,
+                dragView: true,
+                selectConnectedEdges: false
+            }
+        };
+
+        const network = new vis.Network(container, data, defaultOptions);
+
+        // Directional Lineage Graph Highlighting Engine
+        const outgoingMap = {}, incomingMap = {};
+        rawEdges.forEach(e => {
+            if (!outgoingMap[e.from]) outgoingMap[e.from] = [];
+            if (!incomingMap[e.to]) incomingMap[e.to] = [];
+            outgoingMap[e.from].push({ to: e.to, id: e.id });
+            incomingMap[e.to].push({ from: e.from, id: e.id });
+        });
+
+        function resetEdgeColors() {
+            const updates = formattedDefaultEdges.map(e => ({
+                id: e.id,
+                color: { color: '#4b5563', opacity: 0.8 },
+                width: 1.5
+            }));
+            edgesDataSet.update(updates);
+        }
+
+        function highlightLineage(nodeId) {
+            const edgeUpdates = [];
+            const visitedDesc = new Set();
+            const visitedAnc = new Set();
+
+            function traverseDown(currentId, depth) {
+                const nextEdges = outgoingMap[currentId] || [];
+                nextEdges.forEach(edge => {
+                    const edgeColor = depth === 1 ? '#ef4444' : '#f97316';
+                    const edgeWidth = depth === 1 ? 3.5 : 2.5;
+                    edgeUpdates.push({
+                        id: edge.id,
+                        color: { color: edgeColor, highlight: edgeColor, opacity: 1 },
+                        width: edgeWidth
+                    });
+                    if (!visitedDesc.has(edge.to)) {
+                        visitedDesc.add(edge.to);
+                        traverseDown(edge.to, depth + 1);
+                    }
+                });
+            }
+
+            function traverseUp(currentId, depth) {
+                const prevEdges = incomingMap[currentId] || [];
+                prevEdges.forEach(edge => {
+                    const edgeColor = depth === 1 ? '#3b82f6' : '#38bdf8';
+                    const edgeWidth = depth === 1 ? 3.5 : 2.5;
+                    edgeUpdates.push({
+                        id: edge.id,
+                        color: { color: edgeColor, highlight: edgeColor, opacity: 1 },
+                        width: edgeWidth
+                    });
+                    if (!visitedAnc.has(edge.from)) {
+                        visitedAnc.add(edge.from);
+                        traverseUp(edge.from, depth + 1);
+                    }
+                });
+            }
+
+            traverseDown(nodeId, 1);
+            traverseUp(nodeId, 1);
+
+            const activeEdgeIds = new Set(edgeUpdates.map(u => u.id));
+            formattedDefaultEdges.forEach(e => {
+                if (!activeEdgeIds.has(e.id)) {
+                    edgeUpdates.push({
+                        id: e.id,
+                        color: { color: '#252932', opacity: 0.25 },
+                        width: 1
+                    });
+                }
+            });
+
+            edgesDataSet.update(edgeUpdates);
+        }
+
+        network.on('selectNode', params => {
+            if (params.nodes.length > 0) {
+                highlightLineage(params.nodes[0]);
+            }
+        });
+
+        network.on('deselectNode', () => {
+            resetEdgeColors();
+        });
+
+        function getFirstLine(label) {
+            return label ? label.split('\n')[0].trim() : '';
+        }
+
+        function handleSearch(query) {
+            const resultsBox = document.getElementById('search-results');
+            const clearBtn = document.getElementById('search-clear-btn');
+            const cleanQuery = (query || '').trim().toLowerCase();
+
+            if (!cleanQuery) {
+                resultsBox.classList.add('hidden');
+                clearBtn.classList.add('hidden');
+                return;
+            }
+
+            clearBtn.classList.remove('hidden');
+
+            const matches = rawNodes.filter(n => {
+                const firstLine = getFirstLine(n.label).toLowerCase();
+                return firstLine.includes(cleanQuery);
+            });
+
+            if (matches.length === 0) {
+                resultsBox.innerHTML = `<div class="px-3 py-2 text-xs text-neutral-500 italic">No martial artist found</div>`;
+                resultsBox.classList.remove('hidden');
+                return;
+            }
+
+            let html = '';
+            matches.forEach(match => {
+                const name = getFirstLine(match.label);
+                const sub = match.label.split('\n').slice(1).join(' | ');
+                html += `
+                    <div onclick="selectPerson('${match.id}')" class="px-3 py-2 hover:bg-neutral-800 cursor-pointer transition text-left">
+                        <div class="font-bold text-xs text-neutral-200">${name}</div>
+                        ${sub ? `<div class="text-[10px] text-neutral-400 truncate">${sub}</div>` : ''}
+                    </div>
+                `;
+            });
+
+            resultsBox.innerHTML = html;
+            resultsBox.classList.remove('hidden');
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('node-search');
+            input.value = '';
+            document.getElementById('search-results').classList.add('hidden');
+            document.getElementById('search-clear-btn').classList.add('hidden');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#node-search') && !e.target.closest('#search-results')) {
+                document.getElementById('search-results').classList.add('hidden');
+            }
+        });
+
+        function selectPerson(nodeId) {
+            const targetNode = rawNodes.find(n => n.id === nodeId);
+            if (!targetNode) return;
+
+            document.getElementById('node-search').value = getFirstLine(targetNode.label);
+            document.getElementById('search-results').classList.add('hidden');
+
+            const badge = document.getElementById('active-focus-badge');
+            document.getElementById('active-focus-name').textContent = getFirstLine(targetNode.label);
+            badge.classList.remove('hidden');
+
+            // Find all ancestors and descendants
+            const ancestors = new Set();
+            const queueUp = [nodeId];
+            while (queueUp.length > 0) {
+                const cur = queueUp.shift();
+                (incomingMap[cur] || []).forEach(p => {
+                    if (!ancestors.has(p.from)) {
+                        ancestors.add(p.from);
+                        queueUp.push(p.from);
+                    }
+                });
+            }
+
+            const descendants = new Set();
+            const queueDown = [nodeId];
+            while (queueDown.length > 0) {
+                const cur = queueDown.shift();
+                (outgoingMap[cur] || []).forEach(c => {
+                    if (!descendants.has(c.to)) {
+                        descendants.add(c.to);
+                        queueDown.push(c.to);
+                    }
+                });
+            }
+
+            // Assign relative levels
+            const relativeLevels = {};
+            relativeLevels[nodeId] = 0;
+
+            const qUpDist = [{ id: nodeId, dist: 0 }];
+            while (qUpDist.length > 0) {
+                const cur = qUpDist.shift();
+                (incomingMap[cur.id] || []).forEach(p => {
+                    const nextDist = cur.dist - 1;
+                    if (relativeLevels[p.from] === undefined || relativeLevels[p.from] > nextDist) {
+                        relativeLevels[p.from] = nextDist;
+                        qUpDist.push({ id: p.from, dist: nextDist });
+                    }
+                });
+            }
+
+            const qDownDist = [{ id: nodeId, dist: 0 }];
+            while (qDownDist.length > 0) {
+                const cur = qDownDist.shift();
+                (outgoingMap[cur.id] || []).forEach(c => {
+                    const nextDist = cur.dist + 1;
+                    if (relativeLevels[c.to] === undefined || relativeLevels[c.to] < nextDist) {
+                        relativeLevels[c.to] = nextDist;
+                        qDownDist.push({ id: c.to, dist: nextDist });
+                    }
+                });
+            }
+
+            const ancestorDistances = Object.entries(relativeLevels).filter(([id]) => ancestors.has(id)).map(([, d]) => d);
+            const descendantDistances = Object.entries(relativeLevels).filter(([id]) => descendants.has(id)).map(([, d]) => d);
+
+            const minRel = ancestorDistances.length ? Math.min(...ancestorDistances) : 0;
+            const maxRel = descendantDistances.length ? Math.max(...descendantDistances) : 0;
+
+            const targetLevel = rawNodes.find(n => n.id === nodeId).level;
+
+            // Preserve top-to-bottom order across unassociated nodes
+            const rawUnconnectedLevels = {};
+            rawNodes.forEach(n => {
+                if (n.id !== nodeId && !ancestors.has(n.id) && !descendants.has(n.id)) {
+                    if (n.level < targetLevel) {
+                        rawUnconnectedLevels[n.id] = minRel - (targetLevel - n.level);
+                    } else if (n.level > targetLevel) {
+                        rawUnconnectedLevels[n.id] = maxRel + (n.level - targetLevel);
+                    } else {
+                        rawUnconnectedLevels[n.id] = 0;
+                    }
+                }
+            });
+
+            const allComputed = { ...relativeLevels, ...rawUnconnectedLevels };
+            const minAll = Math.min(...Object.values(allComputed));
+
+            const finalLevels = {};
+            rawNodes.forEach(n => {
+                finalLevels[n.id] = (allComputed[n.id] ?? 0) - minAll;
+            });
+
+            // Enforce strictly top-to-bottom edge levels
+            let changed = true;
+            while (changed) {
+                changed = false;
+                rawEdges.forEach(e => {
+                    if (finalLevels[e.to] <= finalLevels[e.from]) {
+                        finalLevels[e.to] = finalLevels[e.from] + 1;
+                        changed = true;
+                    }
+                });
+            }
+
+            const updatedNodesList = rawNodes.map(n => formatNodeData(n, finalLevels[n.id]));
+            const optimizedUpdatedNodes = optimizeLayerOrder(updatedNodesList, rawEdges);
+
+            nodesDataSet.clear();
+            nodesDataSet.add(optimizedUpdatedNodes);
+
+            network.selectNodes([nodeId]);
+            highlightLineage(nodeId);
+
+            // Wait for hierarchical layout stabilization before zooming with short duration
+            network.once('stabilized', () => {
+                network.focus(nodeId, {
+                    scale: 0.95,
+                    animation: { duration: 450, easingFunction: 'easeInOutQuad' }
+                });
+            });
+        }
+
+        // Reset to original tree organization
+        function resetToOriginalGraph(focusCallback) {
+            clearSearch();
+            document.getElementById('active-focus-badge').classList.add('hidden');
+
+            nodesDataSet.clear();
+            nodesDataSet.add(optimizedDefaultNodes.map(n => formatNodeData(n)));
+            resetEdgeColors();
+            network.unselectAll();
+
+            if (typeof focusCallback === 'function') {
+                network.once('stabilized', () => {
+                    focusCallback();
+                });
+            } else {
+                network.once('stabilized', () => {
+                    network.fit({ animation: { duration: 450, easingFunction: 'easeInOutQuad' } });
+                });
+            }
+        }
+
+        // Focus Handlers
+        function zoomToZMAINW(animate = true) {
+            resetToOriginalGraph(() => {
+                const directStudents = (outgoingMap['diloreto'] || []).map(e => e.to);
+                const targetNodes = ['diloreto', ...directStudents];
+                network.fit({
+                    nodes: targetNodes,
+                    animation: animate ? { duration: 450, easingFunction: 'easeInOutQuad' } : false
+                });
+                network.selectNodes(['diloreto']);
+                highlightLineage('diloreto');
+            });
+        }
+
+        function zoomToZMA(animate = true) {
+            resetToOriginalGraph(() => {
+                const zmaNodeIds = rawNodes
+                    .filter(n => n.label && n.label.toUpperCase().includes('ZMA'))
+                    .map(n => n.id);
+
+                if (zmaNodeIds.length > 0) {
+                    network.fit({
+                        nodes: zmaNodeIds,
+                        animation: animate ? { duration: 450, easingFunction: 'easeInOutQuad' } : false
+                    });
+                }
+            });
+        }
+
+        // Default Load Behavior
+        network.once('stabilized', () => {
+            const directStudents = (outgoingMap['diloreto'] || []).map(e => e.to);
+            const targetNodes = ['diloreto', ...directStudents];
+            network.fit({
+                nodes: targetNodes,
+                animation: false
+            });
+            network.selectNodes(['diloreto']);
+            highlightLineage('diloreto');
+        });
+    </script>
+</body>
+</html>
