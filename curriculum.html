@@ -28,484 +28,771 @@
     <main class="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 pb-20 scroll-smooth fade-in">
         <div class="max-w-4xl mx-auto">
             <h1 class="text-4xl font-bold text-white mb-2 uppercase tracking-wide text-center">Belt System & Requirements</h1>
-            <p class="text-neutral-400 text-center mb-10 text-sm">Belt requirements last updated July 25th, 2024. All items subject to change.</p>
+            <p id="sync-status" class="text-neutral-400 text-center mb-8 text-sm">Belt requirements synced dynamically from ZMAINW Curriculum. All items subject to change.</p>
 
+            <!-- Student System Tabs -->
+            <div class="flex justify-center mb-8">
+                <div class="inline-flex bg-neutral-900 border border-neutral-800 p-1 rounded-xl shadow-inner max-w-full overflow-x-auto">
+                    <button onclick="switchStudentTab('standard')" id="tab-btn-standard" class="px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wider transition-all bg-white text-black shadow">
+                        Standard System
+                    </button>
+                    <button onclick="switchStudentTab('junior')" id="tab-btn-junior" class="px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wider transition-all text-neutral-400 hover:text-white">
+                        Junior System
+                    </button>
+                    <button onclick="switchStudentTab('milestone')" id="tab-btn-milestone" class="px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wider transition-all text-neutral-400 hover:text-white">
+                        Milestone System
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dynamic Curriculum Container -->
             <div id="curriculum-container" class="space-y-12">
-                <!-- Content injected via JS -->
+                <div class="flex items-center justify-center py-16 text-neutral-500">
+                    <i class="fas fa-circle-notch fa-spin text-2xl mr-3 text-accent"></i>
+                    <span>Loading curriculum from Google Sheets...</span>
+                </div>
             </div>
         </div>
     </main>
 
     <script>
-        function getAuthCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
-            return null;
-        }
+        function checkLocalAuth() {
+            if (window.location.protocol === 'file:') return true;
+            try {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; zma_authenticated=`);
+                if (parts.length === 2 && decodeURIComponent(parts.pop().split(';').shift()) === 'true') {
+                    return true;
+                }
+            } catch (e) {
+                return true;
+            }
 
-        // Redirect back to home if accessed directly without authenticating
-        if (getAuthCookie('zma_authenticated') !== 'true') {
             const passwordAttempt = prompt("Please enter the password to view this page:");
             if (passwordAttempt === "humblewarrior") {
-                const expires = new Date(Date.now() + 30 * 864e5).toUTCString();
-                document.cookie = `zma_authenticated=true; expires=${expires}; path=/; SameSite=Lax`;
+                try {
+                    const expires = new Date(Date.now() + 30 * 864e5).toUTCString();
+                    document.cookie = `zma_authenticated=true; expires=${expires}; path=/; SameSite=Lax`;
+                } catch (e) {}
+                return true;
             } else {
                 alert("Access denied.");
                 window.location.href = "index.html";
+                return false;
             }
         }
 
-        // Easy-to-edit JSON dictionaries for all curriculum data
-        const curriculumData = [
-            {
-                category: "Standard Belt System",
-                belts: [
-                    {
-                        id: "white", name: "White Belt", colorClass: "bg-white text-black",
-                        reqs: {
-                            info: ["This is the default rank for students over the age of 12 that begin training in Zen Martial Arts", "Students under the age of 13 are placed in the junior belt system unless otherwise requested", "Students can choose to progress through this standard curriculum or through the honorary system detailed below"],
-                            general: [], paper: [], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    },
-                    {
-                        id: "yellow", name: "Yellow Belt (Kyūkyū, 9th Kyū)", colorClass: "bg-[#fff94f] text-black",
-                        reqs: {
-                            info: ["This belt represents the first beginner rank"],
-                            general: ["Self Discipline", "Posture", "Focus", "Flexibility", "Kiai"],
-                            paper: ["Why I am in the Martial Arts"],
-                            form: ["Chon Ji"],
-                            defense: ["Running, Yelling, and Finding Help"],
-                            strikes: ["Long Fist", "Sun Fist", "Back Fist"],
-                            blocks: ["Down Block", "Outside Block"],
-                            kicks: ["Front Kick", "Roundhouse Kick", "Side Kick"],
-                            stances: ["Forward Stance", "Back Stance", "Riding / Horse Stance"],
-                            sticks: ["Stick Set 1-13", "Return to neutral", "Hand placement on and off", "Targeting"],
-                            staff: [], knife: [], sparring: ["Hands vs hands", "Feet vs feet", "Mirroring", "Tracking"],
-                            wing_chun: ["Strikes & Blocks 1-5"],
-                            jujitsu: ["Side Control", "Spider Guard", "Rotation on ground", "Guard vs Side Control", "Tenchinage"], breaking: []
-                        }
-                    },
-                    {
-                        id: "orange", name: "Orange Belt (Hachikyū, 8th Kyū)", colorClass: "bg-[#ffbb0f] text-black",
-                        reqs: {
-                            info: ["This belt represents the second beginner rank"],
-                            general: ["Visualization", "Presence", "Patience", "Strength Improved"],
-                            paper: ["Respect and Discipline in the Martial Arts"], form: ["Do San"],
-                            defense: ["Wrist Grab Escape"],
-                            strikes: ["Knife Hand", "Ridge Hand", "Spear Hand", "Hook Punch", "Upper Cut", "Palm Heel Thrust", "Spinning Backfist", "Jab", "Cross"],
-                            blocks: ["Outside Block", "Overhead Block", "Choke Block", "Slapping Block"],
-                            kicks: ["Hook Kick", "Axe Kick", "Crescent Kick", "Back Kick", "Thrust Kick", "Inverted Roundhouse Kick", "Knees"],
-                            stances: ["Satomake"], sticks: ["1st Sinawali", "2nd Sinawali", "3rd Sinawali", "Random Strikes & Blocks"],
-                            staff: ["Staff Set 1-13"], knife: [],
-                            sparring: ["Symmetry", "Combinations", "Hand strikes improved", "Footwork improved"],
-                            wing_chun: ["Strikes & Blocks 6-10"],
-                            jujitsu: ["Forward Roll", "Side Fall", "Back Fall", "Wrist Grab Escape", "Arm Drop", "Back Control", "Shrimping", "Controlled Grappling on Knees"], breaking: []
-                        }
-                    },
-                    {
-                        id: "blue", name: "Blue Belt (Nanakyū, 7th Kyū)", colorClass: "bg-[#0fabff] text-black",
-                        reqs: {
-                            info: ["This belt represents the first intermediate rank"],
-                            general: ["All previous improved"], paper: ["Fact and Fiction in the Martial Arts"], form: ["Won Hyo"],
-                            defense: ["Regaining Body Wall"], strikes: ["Spinning Hammerfist", "Double Hook Punch", "Back Knuckle"],
-                            blocks: ["Double Forearm Blocks"], kicks: ["Jumping Front Snap", "Jumping Roundhouse", "Jumping Side Kick", "Jumping Thrust Kick"],
-                            stances: ["Cat Stance", "Mid Stance", "Go Man"], sticks: ["Takeaway Set 1-13", "Open Hand Takeaway"],
-                            staff: ["Beginner Staff Spins (optional)"], knife: [],
-                            sparring: ["Counter", "No chasing", "Gates", "Slipping", "Feints", "Angling", "Circling"],
-                            wing_chun: ["Strikes & Blocks 11-15"],
-                            jujitsu: ["Two-direction Pulling", "Front Fall", "Sideward Roll", "Roll Out", "Ikkyo", "Nagashi", "Judo Lock", "O-soto-gari", "Uchi-mata"], breaking: []
-                        }
-                    },
-                    {
-                        id: "purple", name: "Purple Belt (Rokkyū, 6th Kyū)", colorClass: "bg-[#eb0fff] text-white",
-                        reqs: {
-                            info: ["This belt represents the second intermediate rank"], general: [],
-                            paper: ["Elements of a Good Form"], form: ["Yol Gok", "No Kon Cho"], defense: ["Ready & Defensive Stance"],
-                            strikes: ["Elbows", "Reverse Punch"], blocks: ["Depressing Forearm Blocks"],
-                            kicks: ["Spinning Side Kick", "Spinning Roundhouse Kick", "Spinning Crescent Kick", "Spinning Hook Kick", "Spinning Back Kick"],
-                            stances: ["Sanjin Stance"], sticks: ["Random Takeaways"], staff: ["Intermediate Staff Spins (optional)"], knife: [],
-                            sparring: ["Creating Openings", "Strategy", "Spinning Techniques", "Increase complexity of combos"],
-                            wing_chun: ["Chi Sau (1 hand)"],
-                            jujitsu: ["Four-direction Pulling", "Ushiro-ikkyo", "O-soto-otoshi", "O-soto-guruma", "Controlled Grappling Standing"], breaking: []
-                        }
-                    },
-                    {
-                        id: "green", name: "Green Belt (Gokyū, 5th Kyū)", colorClass: "bg-[#02ef3d] text-black",
-                        reqs: {
-                            info: ["This belt represents the first advanced rank"], general: [">12 years of age (rare exceptions)"],
-                            paper: ["Three Weapons of the Martial Arts"], form: ["Chun Gun", "Kojo Sho Tonfa (recommended but optional)", "Kojo Sho Kama (recommended but optional)"],
-                            defense: ["Basic Self Defense: Defining Self Defense"], strikes: ["Simultaneous Strikes", "Upside Down Punch"],
-                            blocks: ["X' Block", "Open Hand Staff Block", "Simultaneous Blocks"], kicks: ["Flying Side Kick", "Flying Knee"],
-                            stances: [], sticks: ["Two Person Stick Set"], staff: [], knife: ["Knife Set 1-9"],
-                            sparring: ["Aerial Techniques Displayed", "Wing Chun Integration"], wing_chun: ["Chi Sau (2 hand)"],
-                            jujitsu: ["Six-direction Pulling", "Backward Roll", "Ude-garami / Keylock", "Gyaku-juji-jime / Cross Collar Choke", "Sode-guruma-jime / Rear Naked Choke", "Kata-gatame / Arm Triangle", "Ude-kishigi-juji-gatame / Arm Bar", "Controlled Grappling w/ Submissions"], breaking: []
-                        }
-                    },
-                    {
-                        id: "green2", name: "2nd-degree Green Belt (Yonkyū, 4th Kyū)", colorClass: "bg-[#00d334] text-black",
-                        reqs: {
-                            info: ["This belt represents the second advanced rank"], general: [],
-                            paper: ["Intellect and Emotion in the Martial Arts"], form: ["Toi Gye", "Kojo Sho Sai (recommended but optional)", "Kojo Sho Nunchaku (recommended but optional)"],
-                            defense: ["Basic Self Defense: Community Resources"], strikes: [], blocks: ["Mountain Blocks"],
-                            kicks: ["Jumping Spinning Side Kick", "Jumping Spinning Roundhouse", "Jumping Spinning Crescent", "Jumping Spinning Hook"],
-                            stances: [], sticks: ["Flow Drills 1-13"], staff: ["Advanced Staff Spins (optional)"], knife: ["Random Knife Defense"],
-                            sparring: ["Multiple Assailant as a Team (2v1)"], wing_chun: [],
-                            jujitsu: ["Takedown from Inside Kick", "Takedown from Outside Kick", "Guillotine Choke", "Sprawl", "Controlled Grappling w/ Strikes", "Kuchiki-taoshi / Single Leg Takedown", "Morote-gari / Double Leg Takedown", "Tai-otoshi"], breaking: []
-                        }
-                    },
-                    {
-                        id: "brown", name: "Brown Belt (Sankyū, 3rd Kyū)", colorClass: "bg-[#efb267] text-black",
-                        reqs: {
-                            info: ["This belt represents the first assistant instructor rank"],
-                            general: ["All previous improved", "Assists with teaching in class", "Great self awareness", ">14 years of age (rare exceptions)"],
-                            paper: ["How to be an Effective Leader"], form: ["Palgae"], defense: ["Basic Self Defense: Situational Awareness"],
-                            strikes: [], blocks: [], kicks: ["Chained Crescent Kicks"], stances: [], sticks: ["Staff vs Sticks 1-13"], staff: [], knife: [],
-                            sparring: ["Multiple Assailant (1v2)", "Experience teaching sparring"], wing_chun: [],
-                            jujitsu: ["High Fall", "O-goshi", "Harai-goshi", "Hane-goshi", "Ushiro-goshi"], breaking: []
-                        }
-                    },
-                    {
-                        id: "brown2", name: "2nd-degree Brown Belt (Nikyū, 2nd Kyū)", colorClass: "bg-[#dda258] text-black",
-                        reqs: {
-                            info: ["This belt represents the second assistant instructor rank"], general: ["Experience leading warm-ups", "Great competency"],
-                            paper: ["The Benefit of Practicing Multiple Martial Arts Styles"], form: ["Taeguek", "Kojo Di Tonfa (recommended but optional)"],
-                            defense: ["Basic Self Defense: Defense Outfitting"], strikes: [], blocks: [], kicks: ["Side Slip Kick", "Roundhouse Slip Kick"],
-                            stances: [], sticks: ["Mirrored Takeaways 1-13"], staff: ["Expert Staff Spins (optional)"], knife: [], sparring: [], wing_chun: [],
-                            jujitsu: ["Irimi-nage", "Tomoe-nage", "Uki-waza", "Daki-wakare"], breaking: []
-                        }
-                    },
-                    {
-                        id: "brown3", name: "3rd-degree Brown Belt (Ikkyū, 1st Kyū)", colorClass: "bg-[#cc934d] text-black",
-                        reqs: {
-                            info: ["This belt represents the third assistant instructor rank"], general: ["Able to teach Basic Self Defense curriculum"],
-                            paper: ["Martial Arts History", "Personal Choice Paper (optional)"], form: ["Hwa Rang", "Kojo Di Nunchaku (recommended but optional)"],
-                            defense: ["Basic Self Defense: Physical Methods"], strikes: [], blocks: [], kicks: ["Flying Spinning Side Kick", "Flying Spinning Hook Kick"],
-                            stances: [], sticks: [], staff: ["Staff Takeaways 1-13"], knife: [], sparring: [], wing_chun: [],
-                            jujitsu: ["Top Mount", "Full Guard", "Half Guard", "Buck & Roll", "Pass Through Full Guard", "Kimura", "Sankaku-jime / Triangle Choke"], breaking: []
-                        }
-                    },
-                    {
-                        id: "black", name: "Black Belt (Shodan, 1st Dan)", colorClass: "bg-black text-white border border-neutral-700",
-                        reqs: {
-                            info: ["This belt represents the first instructor rank", "Instructors at this level have the authority to award color belts to their students"],
-                            general: ["All previous demonstrated and improved", "Trusted to represent Zen Martial Arts", ">16 years of age (rare exceptions)", "10+ years of diligent martial arts practice (rare exceptions)"],
-                            paper: ["How the Martial Arts has Changed My Life", "Structure", "Balance", "Connection", "Flexibility", "Practice", "Strategy", "Kiai", "Offense", "Defense"],
-                            form: ["Koryo", "Yi Jin Jing (optional)"], defense: ["Intermediate Self Defense: Martial Arts vs Self Defense", "Intermediate Self Defense: Impact vs Momentum"],
-                            strikes: [], blocks: [], kicks: ["Upward Front Kick", "Upward Roundhouse Kick", "Upward Side Kick"], stances: [], sticks: [], staff: ["Staff vs Open Hand 1-13"], knife: [],
-                            sparring: ["Multiple Assailant (1v3)"], wing_chun: [],
-                            jujitsu: ["Nikyo", "Sankyo", "Kotegashi", "Shihonage", "Ankle Locks", "Leg Locks", "Punishing", "Koshi-guruma", "Ura-nage", "Hadaka-jime", "Do-jime", "Ude-hishigi-hiza-gatame", "Ude-hishigi-waki-gatame"],
-                            breaking: ["Power Breaking", "Speed Breaking", "Impact Breaking (optional)", "Gravity Breaking (optional)", "Five Break Combo"]
-                        }
-                    },
-                    {
-                        id: "black2", name: "2nd-degree Black Belt (Nidan, 2nd Dan)", colorClass: "bg-black text-white border border-neutral-700",
-                        reqs: {
-                            info: ["This belt represents the second instructor rank"], general: ["Actively teaching *OR* actively taught", ">18 years of age (rare exceptions)", "1+ year since last promotion (rare exceptions)"],
-                            paper: ["The Importance of Teaching in the Martial Arts"], form: ["Choong Moo", "1st Personal Form"],
-                            defense: ["Intermediate Self Defense: Using Environment", "Intermediate Self Defense: Defensive Positioning"], strikes: [], blocks: [], kicks: ["Round Ground Sweep", "Hook Ground Sweep"],
-                            stances: [], sticks: ["Reverse Grip Stick Set 1-13 (recommended but optional)", "Grip Transition for Sticks (recommended but optional)", "4th Sinawali", "5th Sinawali"],
-                            staff: [], knife: ["Knife vs Knife (recommended but optional)"], sparring: [], wing_chun: [],
-                            jujitsu: ["Find and learn five Judo throws outside of curriculum"], breaking: []
-                        }
-                    },
-                    {
-                        id: "black3", name: "3rd-degree Black Belt (Sandan, 3rd Dan)", colorClass: "bg-black text-white border border-neutral-700",
-                        reqs: {
-                            info: ["This belt represents the third instructor rank", "Comes with the authority to award 1st-degree black belts"],
-                            general: ["Able to teach Intermediate Self Defense", "1+ year in another martial art system", ">21 years of age (rare exceptions)", "2+ years since last promotion (rare exceptions)"],
-                            paper: ["A defense of the Zen Martial Arts System"], form: ["Go Fung", "Mirror 1st Personal Form", "Personal Weapon Form"],
-                            defense: ["Intermediate Self Defense: Scanning for Intent", "Intermediate Self Defense: Scanning Break Points"], strikes: [], blocks: [], kicks: ["Launch Kick (optional)"],
-                            stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    },
-                    {
-                        id: "black4", name: "4th-degree Black Belt (Yondan, 4th Dan)", colorClass: "bg-black text-white border border-neutral-700",
-                        reqs: {
-                            info: ["This belt represents the fourth instructor rank", "Comes with the authority to award 2nd-degree black belts"],
-                            general: ["All previous improved", "3+ years in another martial art system", ">25 years of age (rare exceptions)", "3+ years since last promotion (rare exceptions)"],
-                            paper: ["How I Will Carry On the Zen Martial Arts Legacy"], form: ["Mu Churn", "Advanced Staff Form", "Three Weapon Personal Form"],
-                            defense: ["Advanced Self Defense: Meakness as Strength", "Advanced Self Defense: Destructive Abandon"], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [],
-                            sparring: ["Multiple Assailant (1v4)"], wing_chun: [], jujitsu: [], breaking: ["Concrete Breaking (optional)"]
-                        }
-                    },
-                    {
-                        id: "black5", name: "5th-degree Black Belt (Godan, 5th Dan)", colorClass: "bg-black text-white border border-neutral-700",
-                        reqs: {
-                            info: ["This belt represents the fifth instructor rank", "Comes with the authority to award 3rd-degree black belts"],
-                            general: ["Personal Development", "5+ years in another martial arts system", "Renshi title", ">30 years of age (rare exceptions)", "4+ years since last promotion (rare exceptions)"],
-                            paper: ["Personal Choice Paper", "A Comparison of For-Profit vs. Non-Profit Teaching"], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    },
-                    {
-                        id: "black6", name: "6th-degree Black Belt (Rokudan, 6th Dan)", colorClass: "bg-black text-white border border-neutral-700",
-                        reqs: {
-                            info: ["This belt represents the sixth instructor rank", "Comes with the authority to award 4th-degree black belts"],
-                            general: ["Personal Development", "Kyoshi Title (rare exceptions)", ">35 years of age (rare exceptions)", "5+ years since last promotion (rare exceptions)"],
-                            paper: ["Personal Choice Paper"], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    },
-                    {
-                        id: "black7", name: "7th-degree Black Belt (Shichidan, 7th Dan)", colorClass: "bg-black text-white border border-neutral-700",
-                        reqs: {
-                            info: ["This belt represents the seventh instructor rank", "Comes with the authority to award 5th-degree black belts"],
-                            general: ["Personal Development", ">40 years of age (rare exceptions)", "6+ years since last promotion (rare exceptions)"],
-                            paper: ["Personal Choice Paper"], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    },
-                    {
-                        id: "black8", name: "8th-degree Black Belt (Hachidan, 8th Dan)", colorClass: "bg-black text-white border border-neutral-700",
-                        reqs: {
-                            info: ["This belt represents the eighth instructor rank", "Comes with the authority to award 6th-degree black belts"],
-                            general: ["Hanshi Title", ">50 years of age (rare exceptions)", "7+ years since last promotion (rare exceptions)"],
-                            paper: ["How My Perspective Has Changed Through Time"], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    },
-                    {
-                        id: "black9", name: "9th-degree Black Belt (Kudan, 9th Dan)", colorClass: "bg-black text-white border border-neutral-700",
-                        reqs: {
-                            info: ["This belt represents the ninth instructor rank", "Comes with the authority to award 7th-degree black belts"],
-                            general: [">60 years of age (rare exceptions)", "8+ years since last promotion (rare exceptions)"],
-                            paper: [], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    },
-                    {
-                        id: "black10", name: "10th-degree Black Belt (Jūdan, 10th Dan)", colorClass: "bg-black text-white border border-neutral-700",
-                        reqs: {
-                            info: ["This is not a real rank, but reserved as an honorary recognition of exceptional grandmasters", "Only one of the three general requirements must be satisfied"],
-                            general: ["Individual is the founder of Zen Martial Arts", "Individual is world famous (ex. Olympic Medal Holder)", "Post mordem recognition of life accomplishments"],
-                            paper: [], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
+        if (!checkLocalAuth()) {
+            throw new Error("Access Denied");
+        }
+
+        const SHEET_ID = '1qV7CGWZPsgHc0nFAhf35vCicOPkueS7-CP4px_MtXV4';
+        let activeStudentTab = 'standard';
+        
+        let parsedZmaCols = [];
+        let parsedJrCols = [];
+        let parsedElectivesData = null;
+
+        function fetchSheetDataJSONP(tabName) {
+            return new Promise((resolve) => {
+                const callbackName = 'gvizCallback_' + Math.random().toString(36).substring(2, 9);
+                const script = document.createElement('script');
+                
+                window[callbackName] = function(response) {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    if (response && response.table && response.table.rows) {
+                        resolve(response.table);
+                    } else {
+                        resolve(null);
                     }
-                ]
-            },
-            {
-                category: "Junior Belt System",
-                belts: [
-                    {
-                        id: "jrwhite", name: "Jr. White Belt", colorClass: "bg-white text-black bg-[linear-gradient(90deg,transparent_45%,#ccc_45%,#ccc_55%,transparent_55%)]",
-                        reqs: {
-                            info: ["This is the default rank for students under the age of 13 that begin training in Zen Martial Arts", "All of the following junior belts are worn as the respective color with a white stripe along the length of the belt", "Junior belt students can test into the standard system at any time to the equivalent level of the next belt"],
-                            general: [], paper: [], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    },
-                    {
-                        id: "jryellow", name: "Jr. Yellow Belt", colorClass: "bg-[#fff94f] text-black bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)]",
-                        reqs: {
-                            info: [], general: ["Posture", "Focus", "Flexibility"], paper: ["Why I am in the Martial Arts"], form: [], defense: [],
-                            strikes: ["Long Fist", "Sun Fist", "Back Fist"], blocks: [], kicks: ["Chamber", "Pivot", "Front Kick"], stances: ["Fighting Stance"],
-                            sticks: [], staff: [], knife: [], sparring: ["Hands vs hands", "Tracking"], wing_chun: ["Strikes & Blocks 1-3"], jujitsu: ["Side Control", "Spider Guard", "Rotation on ground"], breaking: []
-                        }
-                    },
-                    {
-                        id: "jrorange", name: "Jr. Orange Belt", colorClass: "bg-[#ffbb0f] text-black bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)]",
-                        reqs: {
-                            info: [], general: ["Self discipline", "Kiai", "Activity in Warm-ups"], paper: [], form: ["Chon Ji"], defense: ["Running, Yelling, and Finding Help"],
-                            strikes: ["Jab", "Cross"], blocks: ["Down Block", "Outside Block"], kicks: ["Roundhouse Kick", "Side Kick"], stances: ["Forward Stance", "Back Stance", "Riding / Horse Stance"],
-                            sticks: ["Stick Set 1-7", "Return to neutral", "Hand placement on and off", "Open-hand takeaway", "Targeting"], staff: [], knife: [], sparring: ["Feet vs feet", "Mirroring"],
-                            wing_chun: ["Strikes & Blocks 4-6"], jujitsu: ["Guard vs Side Control", "Tenchinage"], breaking: []
-                        }
-                    },
-                    {
-                        id: "jrblue", name: "Jr. Blue Belt", colorClass: "bg-[#0fabff] text-black bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)]",
-                        reqs: {
-                            info: [], general: ["Visualization", "Patience"], paper: ["Respect and Discipline in the Martial Arts"], form: [], defense: [], strikes: ["Knife Hand", "Ridge Hand", "Spear Hand"],
-                            blocks: [], kicks: ["Inside / Outside Crescent Kick"], stances: [], sticks: ["1st Sinawali"], staff: [], knife: [], sparring: ["Symmetry", "Mixing"],
-                            wing_chun: ["Strikes & Blocks 7-9"], jujitsu: ["Forward Roll", "Side Fall", "Back Fall", "Wrist Grab Escape"], breaking: []
-                        }
-                    },
-                    {
-                        id: "jrpurple", name: "Jr. Purple Belt", colorClass: "bg-[#eb0fff] text-white bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)] text-shadow",
-                        reqs: {
-                            info: [], general: ["Presence", "Strength Improved", "Improved Warm-ups"], paper: [], form: ["Do San"], defense: ["Wrist Grab Escape"],
-                            strikes: ["Hook Punch", "Upper Cut", "Palm Heel Thrust", "Spinning Backfist"], blocks: ["Outside Block", "Overhead Block", "Choke Break", "Slapping Block"],
-                            kicks: ["Hook Kick", "Back Kick", "Thrust Kick"], stances: ["Satomake"], sticks: ["Stick Set 8-13"], staff: [], knife: [],
-                            sparring: ["Combinations", "Hand strikes improved", "Footwork improved", "Not chasing strikes", "Gate protection", "Circling out"], wing_chun: ["Strikes & Blocks 10-12"],
-                            jujitsu: ["Arm Drop", "Back Control", "Shrimping", "Controlled Grappling on Knees"], breaking: []
-                        }
-                    },
-                    {
-                        id: "jrgreen", name: "Jr. Green Belt", colorClass: "bg-[#02ef3d] text-black bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)]",
-                        reqs: {
-                            info: [], general: [], paper: ["Fact and Fiction in the Martial Arts"], form: [], defense: [], strikes: ["Spinning Hammerfist", "Double Hook Punch", "Back Knuckle"],
-                            blocks: [], kicks: ["Axe Kick", "Inverted Roundhouse Kick", "Knees"], stances: [], sticks: ["Takeaway Set 1-7", "2nd Sinawali"], staff: [], knife: [],
-                            sparring: ["Feints", "Angling", "Counter"], wing_chun: ["Strikes & Blocks 13-15"], jujitsu: ["Two-direction Pulling", "Front Fall", "Sideward Roll", "Roll Out", "Ikkyo"], breaking: []
-                        }
-                    },
-                    {
-                        id: "jrred", name: "Jr. Red Belt", colorClass: "bg-[#ff3f3f] text-white bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)]",
-                        reqs: {
-                            info: [], general: [], paper: [], form: ["Won Hyo"], defense: ["Regaining Body Wall"], strikes: ["Elbows", "Reverse Punch"], blocks: ["Double Forearm Blocks"],
-                            kicks: ["Ground Sweep", "Spinning Side Kick", "Spinning Hook Kick"], stances: ["Cat Stance", "Mid Stance", "Go Man"], sticks: ["3rd Sinawali", "Random Stikes & Blocks", "Takeaway Set 8-13"],
-                            staff: ["Strikes & Blocks 1-7"], knife: [], sparring: ["No Chasing", "Strategy", "Slipping", "Creating Openings"], wing_chun: ["Chi Sau (1 hand)"], jujitsu: ["Nagashi", "Judo Lock", "O-soto-gari", "Uchi-mata"], breaking: []
-                        }
-                    },
-                    {
-                        id: "jrbrown", name: "Jr. Brown Belt", colorClass: "bg-[#efb267] text-black bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)]",
-                        reqs: {
-                            info: [], general: [], paper: ["Elements of a Good Form"], form: [], defense: [], strikes: [], blocks: [], kicks: ["Spinning Crescent Kick", "Spinning Roundhouse Kick", "Flying Sidekick", "Jumping Roundhouse", "Jumping Front Snap"],
-                            stances: [], sticks: [], staff: ["Strikes & Blocks 8-13"], knife: [], sparring: ["Spinning Techniques", "Increased complexity of combos"], wing_chun: [], jujitsu: ["Four-direction Pulling", "Ushiro-ikkyo", "O-soto-gari", "O-soto-guruma"], breaking: []
-                        }
-                    },
-                    {
-                        id: "jrblack", name: "Jr. Black Belt", colorClass: "bg-black text-white bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)] border border-neutral-700",
-                        reqs: {
-                            info: ["Junior black belt marks the completion of the intermediate curriculum of Zen Martial Arts", "If a junior black belt student continues, their next test is for the green belt in the standard system"],
-                            general: ["Maturity", "All previous improved"], paper: ["How to Conduct Yourself as a Junior Black Belt"], form: ["Yul Gok", "No Kon Cho"], defense: ["Ready & Defensive Stance"], strikes: [],
-                            blocks: ["Depressing Forearm Blocks"], kicks: ["Jumping Spinning Crescent"], stances: ["Sanjin Stance"], sticks: ["Random Takeaways"], staff: [], knife: [], sparring: [],
-                            wing_chun: ["Chi Sau (2 hand)"], jujitsu: ["Controlled Grappling Standing"], breaking: []
-                        }
-                    }
-                ]
-            },
-            {
-                category: "Honorary Belt System",
-                belts: [
-                    {
-                        id: "beginner", name: "Shokyū / Beginner Gray Belt", colorClass: "bg-[#acacac] text-black bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)]",
-                        reqs: {
-                            info: ["This is the first honorary rank that may be awarded without the student testing", "This rank marks the completion of the beginner curriculum of Zen Martial Arts", "Students with a beginner gray belt are proficient in everything required of yellow and orange belts", "A beginner gray belt has a white stripe along the length of it"],
-                            general: [], paper: [], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    },
-                    {
-                        id: "intermediate", name: "Chūkyū / Intermediate Gray Belt", colorClass: "bg-[#929292] text-black",
-                        reqs: {
-                            info: ["This is the second honorary rank that may be awarded without the student testing", "This rank marks the completion of the intermediate curriculum of Zen Martial Arts", "Students with an intermediate gray belt are proficient in everything required of blue and purple belts", "An intermediate gray belt is a solid gray belt (i.e. no stripe along the length of it)"],
-                            general: [], paper: [], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    },
-                    {
-                        id: "advanced", name: "Jōkyū / Advanced Gray Belt", colorClass: "bg-[#7a7a7a] text-black bg-[linear-gradient(90deg,transparent_45%,black_45%,black_55%,transparent_55%)]",
-                        reqs: {
-                            info: ["This is the third and final honorary rank that may be awarded without the student testing", "This rank marks the completion of the advanced curriculum of Zen Martial Arts", "Students with an advanced gray belt are proficient in everything required of both green belts", "An advanced gray belt has a black stripe along the length of it", "To continue further in the Zen Martial Arts system, one must test into the first assistant instructor level"],
-                            general: [], paper: [], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    }
-                ]
-            },
-            {
-                category: "Instructor Positions & Titles",
-                belts: [
-                    {
-                        id: "assistant", name: "Teaching Assistant / Assistant Instructorship", colorClass: "bg-[#efb267] text-black",
-                        reqs: {
-                            info: ["An assistant instructor is a brown belt student who actively participates in classes and helps teach", "Assistant instructors may act as substitute instructors for the learning experience or when required", "If a student or instructor wishes to, they might honor an assistant instructor by calling them \"Teacher (Name)\""],
-                            general: [], paper: [], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    },
-                    {
-                        id: "instructor", name: "Shidoin (指導員) Title / Instructorship", colorClass: "bg-[#2e2e2e] text-white",
-                        reqs: {
-                            info: ["The character \"Shi\" (指) means \"to point\" or \"indicate\", and \"Do\" (導) means \"to lead\" or \"guide\", which is descriptive of instructors", "An instructor is a black belt who actively teaches and participates in classes", "If a student or instructor wishes to, they might honor an instructor by calling them \"Master (Name)\", similar to the honorific of \"(Name) Sensei\" in Japanese martial art systems"],
-                            general: [], paper: [], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    },
-                    {
-                        id: "renshi", name: "Renshi (錬士) Title / \"Polished Expert\"", colorClass: "bg-[#ffb3b3] text-black",
-                        reqs: {
-                            info: ["The character \"Ren\" (錬) implies \"polished\" or \"refined\", while \"Shi\" (士) translates to \"person\", so the title can be translated to \"polished expert\"", "Masters with the renshi title may choose to wear a decorative red and black paneled belt to events", "The title is a suffix, written formally as \"(Name), Renshi\"", "The title is earned by masters who meet the following general requirements"],
-                            general: ["Trained a student to black belt", "5+ years of active and consistent instructorship", "Recognized by a kyoshi or hanshi"], paper: [], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    },
-                    {
-                        id: "kyoshi", name: "Kyoshi (教士) Title / \"Experienced Teacher\"", colorClass: "bg-[#ff8e8e] text-black",
-                        reqs: {
-                            info: ["The character \"Kyo\" (教) which means \"teach\" or \"education\", so the title can be translated to \"teaching expert\"", "Masters with the kyoshi title may choose to wear a decorative red and white paneled belt to events", "The title is a suffix, written formally as \"(Name), Kyoshi\"", "The title is earned by masters who meet the following general requirements"],
-                            general: ["Trained 3+ students to black belt", "15+ years of active and consistent instructorship", "Recognized by a hanshi"], paper: [], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    },
-                    {
-                        id: "hanshi", name: "Hanshi (範士) Title / \"Model Expert\" / Grandmaster", colorClass: "bg-[#ff5151] text-black",
-                        reqs: {
-                            info: ["The character \"Han\" (範) denotes \"model\" or \"example\", so the title can be translated to \"model expert\"", "Masters with the hanshi title may choose to wear a decorative red belt to events", "The title is a suffix, written formally as \"(Name), Hanshi\", and others often refer to them as \"Grandmaster (Name)\"", "The title is earned by masters who meet the following general requirements"],
-                            general: ["Has a renshi student", "30+ years of active instructorship", "Awarded by popular vote of other masters"], paper: [], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    }
-                ]
-            },
-            {
-                category: "Visitors",
-                belts: [
-                    {
-                        id: "visitor", name: "Visitor", colorClass: "bg-white text-black",
-                        reqs: {
-                            info: ["Just as Zen Martial Arts students are encouraged to explore other martial arts systems, the Zen Martial Arts openly accepts visitors from other systems", "Visitors are allowed to wear their uniform from their own school to practice as long as it is not purposefully disruptive or dishonest", "Visitors are expected to be respectful in how they engage with the class and instructors, and as with anyone who participates, if they compromise the safety or stability of the class, they will be removed", "Visitors are encouraged to participate and progress in the Zen Martial Arts system should the desire arise, and though that implies following the Zen Martial Arts curriculum and wearing belts accordingly, instructors may offer worn symbolism to honor achievements outside of the school"],
-                            general: [], paper: [], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    },
-                    {
-                        id: "visitingmaster", name: "Visiting Instructor", colorClass: "bg-[#2e2e2e] text-white",
-                        reqs: {
-                            info: ["Everything in the visitor category applies (see above list)", "If a visiting martial artist is either an instructor elsewhere or has the title of master in their own system, they are considered a visiting instructor", "A black belt does not always mean instructorship, since each martial art system operates differently in how they award ranks", "Zen Martial Arts students and instructors honor visiting instructors formally during class sessions or other gatherings by calling them \"Mr./Mrs./Ms. (Name)\"", "Visiting instructors are sometimes invited to teach classes and seminars on topics within their domain of experience"],
-                            general: [], paper: [], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    }
-                ]
-            },
-            {
-                category: "Statistics",
-                belts: [
-                    {
-                        id: "beltstat", name: "Belt System Statistics", colorClass: "bg-white text-black",
-                        reqs: {
-                            info: ["A total of 74 current and former ZMANIW students have received ranks in the Zen Martial Arts system: 47 of these students are in the beginner levels, 17 are in the intermediate levels, 2 are in the advanced levels, 5 are in the teaching assistant levels, and 3 have achieved instructorship.", "Since its founding in 1980, the Zen Martial Arts has had a total of 19 instructors including the system's founders, Grandmaster Yip and Master Miller.", "The color belt system has grown and evolved a lot over the years. Grandmaster Yip's system consisted mainly of TKD, Karate, and Judo. The belt progression in his system consisted of the following ranks: yellow, orange, blue, green, 3 browns, and finally black. Grandmaster Stillwagon brought Wing Chun and weapon styles into our system. He added a couple ranks to the belt progression, placing purple between blue and green, and adding the red belt after green. The system was further developed under Master Di Loreto's leadership, both refining what was provided by Grandmasters Yip and Stillwagon while also expanding on areas such as grappling. As the green and red ranks became overpopulated with requirements, each was split into two, so the belt system had 2 green and 2 red belt ranks after purple and before brown. Master Swartwood further contributed to the belt system, adding in the junior belts and honorary ranks to the system. He also added much to the grappling system, including Japanese Jujutsu, Judo, and Budo Tanren practices. As ZMAINW continued to grow and evolve and adapt to the changing martial arts scene throughout the world, Masters Di Loreto and Swartwood saw an opportunity adjust the belt system, completely removing the 2 red belt ranks, but maintaining the order of requirements. This meant that both brown belt and black belt came to exist two ranks earlier in the curriculum, and anyone who existed in the red and brown belt ranks were thereby elevated by two ranks. Masters Di Loreto and Swartwood decided that while this change would affect their students, everyone in the black belt ranks would maintain their current ranks and forego potential promotions themselves. Later, Masters Di Loreto and Swartwood replaced the concept and title of \"Master\" with the shogo titles, adopted from Japanese martial art systems. This incentivizes teaching accomplishments and furthering of Zen Martial Arts as a whole, and gives new meaning to the color red on belts at master levels."],
-                            general: [], paper: [], form: [], defense: [], strikes: [], blocks: [], kicks: [], stances: [], sticks: [], staff: [], knife: [], sparring: [], wing_chun: [], jujitsu: [], breaking: []
-                        }
-                    }
-                ]
+                };
+
+                script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:${callbackName}&sheet=${encodeURIComponent(tabName)}`;
+                script.onerror = function() {
+                    delete window[callbackName];
+                    if (script.parentNode) document.body.removeChild(script);
+                    resolve(null);
+                };
+
+                document.body.appendChild(script);
+            });
+        }
+
+        const labels = {
+            info: "Information", 
+            general: "General Requirements", 
+            papers: "Papers", 
+            forms: "Forms", 
+            weapons: "Weapons", 
+            wing_chun: "Wing Chun", 
+            sparring: "Sparring", 
+            grappling: "Grappling", 
+            self_defense: "Self Defense", 
+            striking: "Striking", 
+            tanren: "Tanren", 
+            proficiency: "Proficiency",
+            electives: "Electives"
+        };
+
+        function parseCurriculumTable(table) {
+            if (!table || !table.rows || table.rows.length === 0) return [];
+
+            const rows = table.rows;
+            const numCols = table.cols ? table.cols.length : (rows[0]?.c?.length || 0);
+
+            const columns = [];
+            for (let c = 1; c < numCols; c++) {
+                const levelVal = rows[0]?.c?.[c]?.v || '';
+                const rankVal = rows[1]?.c?.[c]?.v || '';
+                const colorVal = rows[2]?.c?.[c]?.v || '';
+
+                if (!levelVal && !rankVal && !colorVal) continue;
+
+                columns.push({
+                    colIndex: c,
+                    level: levelVal.toString().trim(),
+                    rank: rankVal.toString().trim(),
+                    color: colorVal.toString().trim(),
+                    reqs: {}
+                });
             }
-        ];
 
-        function renderCurriculum() {
-            const container = document.getElementById('curriculum-container');
-            let html = '';
+            let currentCategory = '';
 
-            curriculumData.forEach(section => {
-                html += `
-                    <section class="mb-10">
-                        <h2 class="text-2xl font-bold text-white uppercase border-b border-neutral-800 pb-2 mb-6">${section.category}</h2>
-                        <div class="space-y-3">
-                `;
+            for (let r = 3; r < rows.length; r++) {
+                const col0Val = rows[r]?.c?.[0]?.v;
+                if (col0Val !== null && col0Val !== undefined && col0Val.toString().trim() !== '') {
+                    const rawCat = col0Val.toString().trim().toLowerCase();
+                    
+                    // Stop processing below the first Electives requirement row
+                    if (['zma core', 'zmainw', 'and', 'verticals', 'belts worn'].includes(rawCat)) {
+                        currentCategory = '';
+                        continue;
+                    }
+                    if (rawCat === 'electives' && currentCategory === 'electives') {
+                        // Encountered the electives notes/verticals header section below the table
+                        break;
+                    }
+                    currentCategory = rawCat.replace(/\s+/g, '_');
+                }
 
-                section.belts.forEach(belt => {
-                    html += `
-                        <div class="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden transition-all duration-200">
-                            <button onclick="toggleReqs('${belt.id}')" class="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-neutral-800 focus:outline-none group">
-                                <div class="flex items-center">
-                                    <div class="w-8 h-8 rounded border border-neutral-600 mr-4 shadow-inner ${belt.colorClass}"></div>
-                                    <span class="font-bold uppercase tracking-wider text-sm sm:text-base text-neutral-300 group-hover:text-white">${belt.name}</span>
+                if (!currentCategory) continue;
+
+                columns.forEach(colObj => {
+                    const c = colObj.colIndex;
+                    const is10thKyu = colObj.rank.includes('10th') && !colObj.rank.includes('High');
+
+                    // 10th Kyu stops after 'General'
+                    if (is10thKyu && !['info', 'general'].includes(currentCategory)) {
+                        return;
+                    }
+
+                    const cellVal = rows[r]?.c?.[c]?.v;
+                    if (cellVal !== null && cellVal !== undefined && cellVal.toString().trim() !== '') {
+                        const str = cellVal.toString().trim();
+                        if (!['notes:', 'none', '-'].includes(str.toLowerCase())) {
+                            if (!colObj.reqs[currentCategory]) {
+                                colObj.reqs[currentCategory] = [];
+                            }
+                            colObj.reqs[currentCategory].push(str);
+                        }
+                    }
+                });
+            }
+
+            return columns;
+        }
+
+        function parseElectivesAndVerticals(table) {
+            if (!table || !table.rows) return getFallbackElectives();
+
+            try {
+                const rows = table.rows;
+
+                // Extract Elective Categories (Columns 4 to 10)
+                const electiveCategories = [];
+                for (let c = 4; c <= 10; c++) {
+                    const catTitle = rows[52]?.c?.[c]?.v?.toString().trim();
+                    if (!catTitle) continue;
+                    const items = [];
+                    for (let r = 53; r <= 59; r++) {
+                        const val = rows[r]?.c?.[c]?.v;
+                        if (val && val.toString().trim()) {
+                            items.push(val.toString().trim());
+                        }
+                    }
+                    electiveCategories.push({ title: catTitle, items });
+                }
+
+                // Extract Verticals Categories (Columns 13 to 15)
+                const verticalCategories = [];
+                for (let c = 13; c <= 15; c++) {
+                    const catTitle = rows[52]?.c?.[c]?.v?.toString().trim();
+                    if (!catTitle) continue;
+                    const items = [];
+                    for (let r = 53; r <= 59; r++) {
+                        const val = rows[r]?.c?.[c]?.v;
+                        if (val && val.toString().trim()) {
+                            items.push(val.toString().trim());
+                        }
+                    }
+                    verticalCategories.push({ title: catTitle, items });
+                }
+
+                return {
+                    electiveCategories: electiveCategories.length > 0 ? electiveCategories : getFallbackElectives().electiveCategories,
+                    verticalCategories: verticalCategories.length > 0 ? verticalCategories : getFallbackElectives().verticalCategories
+                };
+            } catch (err) {
+                console.warn("Using fallback electives parsing", err);
+                return getFallbackElectives();
+            }
+        }
+
+        function getFallbackElectives() {
+            return {
+                electiveCategories: [
+                    {
+                        title: "Weapons Forms / Patterns",
+                        items: ["Kojo Sho: Tonfa, Kama, Sai, Nunchaku", "Kojo Di: Tonfa, Nunchaku", "Traditional Chinese Weapon Form", "Personal Weapon Form", "Freestyle Staff Spins"]
+                    },
+                    {
+                        title: "Weapons Sets",
+                        items: ["Weapon Sparring (Sticks, Staff, Swords, etc.)", "Reverse Grip Stick Set 1-13", "Exploration: Weapon Set 1-13", "Exploration: Weapon vs. Other Weapon 1-13", "Exploration: Knife 1-9 w/ Different Grips", "Exploration: Knife vs. Knife 1-9"]
+                    },
+                    {
+                        title: "Taekwondo",
+                        items: ["Extracurricular Forms (ITF)", "Extracurricular Forms (WT)", "Jumping Spinning Kicks", "Flying Spinning Kicks", "TKD-Style Breaking"]
+                    },
+                    {
+                        title: "Grappling",
+                        items: ["Additional Judo Throws (Ashi/Te-waza)", "Brazilian Jiu-jitsu Submissions", "Additional Wrestling / Jiu-jitsu Takedowns"]
+                    },
+                    {
+                        title: "Wing Chun / Tai Chi",
+                        items: ["Wing Chun Forms w/ Traditional Dummy", "Traditional Wing Chun Forms", "Traditional Tai Chi Forms"]
+                    },
+                    {
+                        title: "Tanren",
+                        items: ["Yi Jin Jing", "Budo Tanren Tissue Recruitment Paradigms", "Dragon Stepping"]
+                    },
+                    {
+                        title: "Other Electives",
+                        items: ["Additional Papers / Personal Essays", "Techniques / Demonstrations Outside ZMA", "Competition Experience (Tournaments)"]
+                    }
+                ],
+                verticalCategories: [
+                    {
+                        title: "Martial Art Styles",
+                        items: ["Budo Tanren, Tai Chi, & Other Internal Arts", "Shinto-Ryu, Icho-Ryu, & Other Weapon Arts", "Brazilian Jiu-jitsu, Judo, & Other Ground Arts", "Karate, Taekwondo, & Other Striking Arts"]
+                    },
+                    {
+                        title: "Complementary Practices",
+                        items: ["Crafting (Woodworking or Martial Tools)", "Yoga, Physical Therapy, & Other Health Disciplines", "Wellness, Therapy, & Mental Health", "Breaking (Stacks, Concrete, Bricks, & More)"]
+                    },
+                    {
+                        title: "Scholarship & Service",
+                        items: ["Administration (Establishing/Leading a Dojo)", "Scientific Inquiry & Martial Scholarship", "Participating In / Organizing Charity Events", "Organizing Martial Arts Tournaments"]
+                    }
+                ]
+            };
+        }
+
+        function getBeltColorClass(colorName, rankName) {
+            const c = (colorName || rankName || '').toLowerCase();
+            if (c.includes('yellow w/ white')) return "bg-[#fff94f] text-black bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)]";
+            if (c.includes('orange w/ white')) return "bg-[#ffbb0f] text-black bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)]";
+            if (c.includes('blue w/ white')) return "bg-[#0fabff] text-black bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)]";
+            if (c.includes('purple w/ white')) return "bg-[#eb0fff] text-white bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)]";
+            if (c.includes('green w/ white')) return "bg-[#02ef3d] text-black bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)]";
+            if (c.includes('brown w/ white')) return "bg-[#efb267] text-black bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)]";
+            if (c.includes('red w/ white')) return "bg-[#ff3f3f] text-white bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)]";
+            if (c.includes('black w/ white')) return "bg-black text-white bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)] border border-neutral-700";
+            if (c.includes('yellow')) return "bg-[#fff94f] text-black";
+            if (c.includes('orange')) return "bg-[#ffbb0f] text-black";
+            if (c.includes('blue')) return "bg-[#0fabff] text-black";
+            if (c.includes('purple')) return "bg-[#eb0fff] text-white";
+            if (c.includes('green')) return "bg-[#02ef3d] text-black";
+            if (c.includes('brown')) return "bg-[#efb267] text-black";
+            if (c.includes('coral') || c.includes('red-black')) return "bg-[repeating-linear-gradient(45deg,#000,#000_6px,#b91c1c_6px,#b91c1c_12px)] text-white";
+            if (c.includes('red-white') || c.includes('red w/ white')) return "bg-[repeating-linear-gradient(45deg,#fff,#fff_6px,#b91c1c_6px,#b91c1c_12px)] text-black";
+            if (c.includes('red')) return "bg-[#ff3f3f] text-white";
+            if (c.includes('black')) return "bg-black text-white border border-neutral-700";
+            return "bg-white text-black";
+        }
+
+        async function initCurriculum() {
+            try {
+                const [zmaTable, jrTable] = await Promise.all([
+                    fetchSheetDataJSONP('ZMAINW Curriculum'),
+                    fetchSheetDataJSONP('Junior Curriculum')
+                ]);
+
+                if (zmaTable && zmaTable.rows) {
+                    parsedZmaCols = parseCurriculumTable(zmaTable);
+                    parsedElectivesData = parseElectivesAndVerticals(zmaTable);
+                } else {
+                    parsedElectivesData = getFallbackElectives();
+                }
+
+                if (jrTable && jrTable.rows) {
+                    parsedJrCols = parseCurriculumTable(jrTable);
+                }
+
+                renderAllSections();
+            } catch (err) {
+                console.warn("Dynamic fetch encountered issue; rendering baseline curriculum view.", err);
+                parsedElectivesData = getFallbackElectives();
+                renderAllSections();
+            }
+        }
+
+        function mergeRequirements(...reqObjects) {
+            const res = {};
+            reqObjects.forEach(obj => {
+                if (!obj) return;
+                for (const [cat, list] of Object.entries(obj)) {
+                    if (!res[cat]) res[cat] = [];
+                    if (Array.isArray(list)) {
+                        list.forEach(item => {
+                            if (!res[cat].includes(item)) res[cat].push(item);
+                        });
+                    }
+                }
+            });
+            return res;
+        }
+
+        function switchStudentTab(tabKey) {
+            activeStudentTab = tabKey;
+            ['standard', 'junior', 'milestone'].forEach(k => {
+                const btn = document.getElementById(`tab-btn-${k}`);
+                if (k === tabKey) {
+                    btn.className = "px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wider transition-all bg-white text-black shadow";
+                } else {
+                    btn.className = "px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-bold uppercase tracking-wider transition-all text-neutral-400 hover:text-white";
+                }
+            });
+            renderAllSections();
+        }
+
+        function renderAccordion(id, name, colorClass, reqs, isRecommended = false) {
+            return `
+                <div class="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden transition-all duration-200 hover:border-neutral-700">
+                    <button onclick="toggleReqs('${id}')" class="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-neutral-800 focus:outline-none group">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded border border-neutral-600 mr-4 shadow-inner shrink-0 ${colorClass}"></div>
+                            <span class="font-bold uppercase tracking-wider text-sm sm:text-base text-neutral-300 group-hover:text-white">${name}</span>
+                        </div>
+                        <i id="icon-${id}" class="fas fa-chevron-down text-neutral-500 transition-transform duration-200 ml-2"></i>
+                    </button>
+                    
+                    <div id="reqs-${id}" class="hidden bg-black p-6 border-t border-neutral-800">
+                        ${buildRequirementsList(reqs, isRecommended)}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderElectivesAccordion() {
+            const data = parsedElectivesData || getFallbackElectives();
+
+            let contentHtml = `
+                <div class="space-y-6 text-sm">
+                    <!-- Elective Examples -->
+                    <div>
+                        <h4 class="text-accent font-bold uppercase tracking-wider text-xs mb-3 flex items-center">
+                            <i class="fas fa-layer-group mr-2"></i>Elective Tracks & Examples
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            ${data.electiveCategories.map(cat => `
+                                <div class="bg-neutral-950 border border-neutral-800/90 rounded-md p-3.5">
+                                    <h5 class="text-xs font-bold uppercase text-white tracking-wider mb-2 pb-1 border-b border-neutral-800 flex items-center justify-between">
+                                        <span>${cat.title}</span>
+                                        <i class="fas fa-check text-[10px] text-accent/70"></i>
+                                    </h5>
+                                    <ul class="list-disc list-inside text-neutral-400 space-y-1 text-xs">
+                                        ${cat.items.map(item => `<li>${item}</li>`).join('')}
+                                    </ul>
                                 </div>
-                                <i id="icon-${belt.id}" class="fas fa-chevron-down text-neutral-500 transition-transform duration-200"></i>
-                            </button>
-                            
-                            <div id="reqs-${belt.id}" class="hidden bg-black p-6 border-t border-neutral-800">
-                                ${buildRequirementsList(belt.reqs)}
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Instructor Verticals -->
+                    <div>
+                        <h4 class="text-amber-400 font-bold uppercase tracking-wider text-xs mb-3 flex items-center">
+                            <i class="fas fa-star mr-2"></i>Instructor Vertical Domains (3rd Dan+)
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            ${data.verticalCategories.map(cat => `
+                                <div class="bg-neutral-950 border border-neutral-800/90 rounded-md p-3.5">
+                                    <h5 class="text-xs font-bold uppercase text-white tracking-wider mb-2 pb-1 border-b border-neutral-800 flex items-center justify-between">
+                                        <span>${cat.title}</span>
+                                        <i class="fas fa-certificate text-[10px] text-amber-400/70"></i>
+                                    </h5>
+                                    <ul class="list-disc list-inside text-neutral-400 space-y-1 text-xs">
+                                        ${cat.items.map(item => `<li>${item}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return `
+                <div class="bg-neutral-900 border border-accent/40 rounded-lg overflow-hidden transition-all duration-200 hover:border-accent shadow-[0_0_12px_rgba(255,255,255,0.03)]">
+                    <button onclick="toggleReqs('electives-verticals-dropdown')" class="w-full text-left px-4 py-3.5 flex items-center justify-between hover:bg-neutral-800 focus:outline-none group">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded border border-neutral-600 mr-4 shadow-inner shrink-0 bg-neutral-800 text-accent flex items-center justify-center font-bold text-sm">
+                                <i class="fas fa-book-open"></i>
+                            </div>
+                            <div>
+                                <span class="font-bold uppercase tracking-wider text-sm sm:text-base text-white group-hover:text-accent transition-colors">Electives & Verticals</span>
+                                <span class="block text-[11px] text-neutral-400 font-normal">Extracurricular forms, weapon sets, cross-training, and specializations</span>
                             </div>
                         </div>
-                    `;
-                });
+                        <i id="icon-electives-verticals-dropdown" class="fas fa-chevron-down text-neutral-400 transition-transform duration-200 ml-2"></i>
+                    </button>
+                    
+                    <div id="reqs-electives-verticals-dropdown" class="hidden bg-black p-6 border-t border-neutral-800">
+                        ${contentHtml}
+                    </div>
+                </div>
+            `;
+        }
 
-                html += `</div></section>`;
+        function renderDanRanksCombinedAccordion(parsedCols) {
+            // Extract columns for Nidan, Sandan, and Yondan (Tests 1, 2, and 3)
+            const test1Col = parsedCols.find(c => c.rank.toLowerCase().includes('nidan') || c.rank.toLowerCase().includes('2nd dan'));
+            const test2Col = parsedCols.find(c => c.rank.toLowerCase().includes('sandan') || c.rank.toLowerCase().includes('3rd dan'));
+            const test3Col = parsedCols.find(c => c.rank.toLowerCase().includes('yondan') || c.rank.toLowerCase().includes('4th dan'));
+
+            const testRanks = [
+                { label: "1st Test (Nidan / 2nd Dan)", col: test1Col },
+                { label: "2nd Test (Sandan / 3rd Dan)", col: test2Col },
+                { label: "3rd Test (Yondan / 4th Dan)", col: test3Col }
+            ];
+
+            const getTestSpecificReqs = (col) => {
+                if (!col || !col.reqs) return {};
+                const filtered = {};
+                for (const [key, items] of Object.entries(col.reqs)) {
+                    if (key !== 'info' && key !== 'general') {
+                        filtered[key] = items;
+                    }
+                }
+                return filtered;
+            };
+
+            // Extract Nidan through Kudan (2nd Dan to 9th Dan)
+            const danRanksGeneral = parsedCols.filter(c => {
+                const r = c.rank.toLowerCase();
+                return r.includes('nidan') || r.includes('2nd dan') ||
+                       r.includes('sandan') || r.includes('3rd dan') ||
+                       r.includes('yondan') || r.includes('4th dan') ||
+                       r.includes('godan') || r.includes('5th dan') ||
+                       r.includes('rokudan') || r.includes('6th dan') ||
+                       r.includes('shichidan') || r.includes('nanadan') || r.includes('7th dan') ||
+                       r.includes('hachidan') || r.includes('8th dan') ||
+                       r.includes('kudan') || r.includes('9th dan');
             });
+
+            let innerHtml = `
+                <div class="space-y-6">
+                    <!-- Section 1: Testing & Promotion Policy -->
+                    <div class="p-4 rounded-lg bg-neutral-900/90 border border-neutral-800 text-xs sm:text-sm text-neutral-300">
+                        <h4 class="font-bold text-white uppercase tracking-wider text-xs mb-1.5 flex items-center text-accent">
+                            <i class="fas fa-certificate mr-2"></i>Testing & Promotion Policy
+                        </h4>
+                        <p class="leading-relaxed">Instructor ranks and Dan advancements can be achieved through testing or awarded at the discretion and recognition of other instructors. The material outlined below represents <strong>recommended test material</strong> for instructors who choose to test.</p>
+                    </div>
+
+                    <!-- Section 2: Recommended Test Material -->
+                    <div>
+                        <h4 class="font-bold text-white uppercase tracking-wider text-xs mb-3 flex items-center text-accent">
+                            <i class="fas fa-list-check mr-2"></i>Recommended Test Material
+                        </h4>
+                        <div class="space-y-3">
+                            ${testRanks.map(t => {
+                                const testReqs = t.col ? getTestSpecificReqs(t.col) : {};
+                                return `
+                                    <div class="border border-neutral-800 rounded-md p-4 bg-neutral-950">
+                                        <h5 class="text-sm font-bold text-white mb-3 flex items-center">
+                                            <span class="w-2 h-2 rounded-full bg-accent mr-2"></span>
+                                            ${t.label}
+                                        </h5>
+                                        ${buildRequirementsList(testReqs, true)}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Section 3: General Requirements & Information (Nidan through Kudan) -->
+                    <div>
+                        <h4 class="font-bold text-white uppercase tracking-wider text-xs mb-3 flex items-center text-accent">
+                            <i class="fas fa-circle-info mr-2"></i>General Requirements & Information (Nidan through Kudan)
+                        </h4>
+                        <div class="space-y-3">
+                            ${danRanksGeneral.map(col => {
+                                const generalInfoReqs = {};
+                                if (col.reqs.info && col.reqs.info.length > 0) generalInfoReqs.info = col.reqs.info;
+                                if (col.reqs.general && col.reqs.general.length > 0) generalInfoReqs.general = col.reqs.general;
+
+                                return `
+                                    <div class="border border-neutral-800 rounded-md p-4 bg-neutral-950">
+                                        <h5 class="text-sm font-bold text-white mb-2 flex items-center justify-between">
+                                            <span>${col.rank} ${col.level ? `(${col.level})` : ''}</span>
+                                            <span class="text-xs font-normal text-neutral-400">${col.color || ''}</span>
+                                        </h5>
+                                        ${buildRequirementsList(generalInfoReqs, false)}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return `
+                <div class="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden transition-all duration-200 hover:border-neutral-700">
+                    <button onclick="toggleReqs('dan-ranks-combined')" class="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-neutral-800 focus:outline-none group">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded border border-neutral-600 mr-4 shadow-inner shrink-0 bg-black text-white flex items-center justify-center font-bold text-xs">DAN</div>
+                            <span class="font-bold uppercase tracking-wider text-sm sm:text-base text-neutral-300 group-hover:text-white">Dan Ranks (2nd Dan to 9th Dan)</span>
+                        </div>
+                        <i id="icon-dan-ranks-combined" class="fas fa-chevron-down text-neutral-500 transition-transform duration-200 ml-2"></i>
+                    </button>
+                    
+                    <div id="reqs-dan-ranks-combined" class="hidden bg-black p-6 border-t border-neutral-800">
+                        ${innerHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAllSections() {
+            const container = document.getElementById('curriculum-container');
+
+            const colNovice = parsedZmaCols.find(c => c.rank.includes('10th') && !c.rank.includes('High')) || { rank: "10th Kyū", level: "Novice", color: "White", reqs: { info: ["Default rank for new members of the class."], general: ["Participated in a couple of classes."] } };
+            const colYellow = parsedZmaCols.find(c => c.rank.includes('9th') && !c.rank.includes('High')) || { rank: "9th Kyū", level: "Beginner I", color: "Yellow", reqs: {} };
+            const colOrange = parsedZmaCols.find(c => c.rank.includes('8th') && !c.rank.includes('High')) || { rank: "8th Kyū", level: "Beginner II", color: "Orange", reqs: {} };
+            const colBlue = parsedZmaCols.find(c => c.rank.includes('7th') && !c.rank.includes('High')) || { rank: "7th Kyū", level: "Intermediate I", color: "Blue", reqs: {} };
+            const colPurple = parsedZmaCols.find(c => c.rank.includes('6th') && !c.rank.includes('High')) || { rank: "6th Kyū", level: "Intermediate II", color: "Purple", reqs: {} };
+            const colGreen1 = parsedZmaCols.find(c => c.rank.includes('5th')) || { rank: "5th Kyū", level: "Advanced I", color: "Green", reqs: {} };
+            const colGreen2 = parsedZmaCols.find(c => c.rank.includes('4th')) || { rank: "4th Kyū", level: "Advanced II", color: "Green (2 stripes)", reqs: {} };
+            
+            const colBrown1 = parsedZmaCols.find(c => c.rank.includes('3rd') && c.level.includes('Teaching')) || { rank: "3rd Kyū", level: "Teaching Assistant I", color: "Brown", reqs: {} };
+            const colBrown2 = parsedZmaCols.find(c => c.rank.includes('2nd') && c.level.includes('Teaching')) || { rank: "2nd Kyū", level: "Teaching Assistant II", color: "Brown", reqs: {} };
+            const colBrown3 = parsedZmaCols.find(c => c.rank.includes('1st') && c.level.includes('Teaching')) || { rank: "1st Kyū", level: "Teaching Assistant III", color: "Brown", reqs: {} };
+            const colShodan = parsedZmaCols.find(c => c.rank.includes('Shodan') || c.rank.includes('1st Dan')) || { rank: "Shodan (1st Dan)", level: "Instructor I", color: "Black", reqs: {} };
+
+            // 1. Student Belts (White -> 4th Kyū)
+            let studentBeltsHtml = '';
+            let studentTitle = "Student Curriculum (10th to 4th Kyū)";
+
+            if (activeStudentTab === 'standard') {
+                const stdList = [
+                    { id: "white", name: `White Belt (${colNovice.rank})`, colorClass: getBeltColorClass(colNovice.color, colNovice.rank), reqs: colNovice.reqs },
+                    { id: "yellow", name: `Yellow Belt (${colYellow.rank})`, colorClass: getBeltColorClass(colYellow.color, colYellow.rank), reqs: colYellow.reqs },
+                    { id: "orange", name: `Orange Belt (${colOrange.rank})`, colorClass: getBeltColorClass(colOrange.color, colOrange.rank), reqs: colOrange.reqs },
+                    { id: "blue", name: `Blue Belt (${colBlue.rank})`, colorClass: getBeltColorClass(colBlue.color, colBlue.rank), reqs: colBlue.reqs },
+                    { id: "purple", name: `Purple Belt (${colPurple.rank})`, colorClass: getBeltColorClass(colPurple.color, colPurple.rank), reqs: colPurple.reqs },
+                    { id: "green", name: `Green Belt (${colGreen1.rank})`, colorClass: getBeltColorClass(colGreen1.color, colGreen1.rank), reqs: colGreen1.reqs },
+                    { id: "green2", name: `2nd-degree Green Belt (${colGreen2.rank})`, colorClass: getBeltColorClass(colGreen2.color, colGreen2.rank), reqs: colGreen2.reqs }
+                ];
+                studentBeltsHtml = stdList.map(b => renderAccordion(b.id, b.name, b.colorClass, b.reqs)).join('');
+
+            } else if (activeStudentTab === 'junior') {
+                studentTitle = "Junior Belt System (White to 4th Kyū)";
+                const jrList = parsedJrCols.map(c => ({
+                    id: `jr-${c.rank.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+                    name: `${c.color} (${c.rank})`,
+                    colorClass: getBeltColorClass(c.color, c.rank),
+                    reqs: c.reqs
+                }));
+
+                jrList.push(
+                    { id: "jr-green1", name: `Green Belt (${colGreen1.rank})`, colorClass: getBeltColorClass(colGreen1.color, colGreen1.rank), reqs: colGreen1.reqs },
+                    { id: "jr-green2", name: `2nd-degree Green Belt (${colGreen2.rank})`, colorClass: getBeltColorClass(colGreen2.color, colGreen2.rank), reqs: colGreen2.reqs }
+                );
+
+                studentBeltsHtml = jrList.map(b => renderAccordion(b.id, b.name, b.colorClass, b.reqs)).join('');
+
+            } else if (activeStudentTab === 'milestone') {
+                studentTitle = "Milestone / Honorary System (White to 4th Kyū)";
+                const milestoneList = [
+                    { id: "m-white", name: `White Belt (${colNovice.rank})`, colorClass: getBeltColorClass(colNovice.color, colNovice.rank), reqs: colNovice.reqs },
+                    { 
+                        id: "m-gray-begin", 
+                        name: "Shokyū / Beginner Gray Belt", 
+                        colorClass: "bg-[#acacac] text-black bg-[linear-gradient(90deg,transparent_45%,white_45%,white_55%,transparent_55%)]", 
+                        reqs: mergeRequirements(
+                            { info: ["Condenses yellow and orange belt curricula into a single beginner milestone rank.", "Proficient in all fundamentals of Yellow and Orange belts."] },
+                            colYellow.reqs, 
+                            colOrange.reqs
+                        ) 
+                    },
+                    { 
+                        id: "m-gray-inter", 
+                        name: "Chūkyū / Intermediate Gray Belt", 
+                        colorClass: "bg-[#929292] text-black", 
+                        reqs: mergeRequirements(
+                            { info: ["Condenses blue and purple belt curricula into a single intermediate milestone rank.", "Proficient in all fundamentals of Blue and Purple belts."] },
+                            colBlue.reqs, 
+                            colPurple.reqs
+                        ) 
+                    },
+                    { 
+                        id: "m-gray-adv", 
+                        name: "Jōkyū / Advanced Gray Belt", 
+                        colorClass: "bg-[#7a7a7a] text-black bg-[linear-gradient(90deg,transparent_45%,black_45%,black_55%,transparent_55%)]", 
+                        reqs: mergeRequirements(
+                            { info: ["Condenses both 1st and 2nd degree green belts into a single advanced milestone rank.", "Prepares the student for the instructor ranks beginning at 3rd Kyū."] },
+                            colGreen1.reqs, 
+                            colGreen2.reqs
+                        ) 
+                    }
+                ];
+                studentBeltsHtml = milestoneList.map(b => renderAccordion(b.id, b.name, b.colorClass, b.reqs)).join('');
+            }
+
+            // Append Electives & Verticals dropdown directly underneath 4th Kyū
+            studentBeltsHtml += renderElectivesAccordion();
+
+            // 2. Instructor Ranks in sequence
+            const instructorRankElements = [
+                renderAccordion('brown', `Brown Belt (${colBrown1.rank})`, getBeltColorClass(colBrown1.color, colBrown1.rank), colBrown1.reqs),
+                renderAccordion('brown2', `2nd-degree Brown Belt (${colBrown2.rank})`, getBeltColorClass(colBrown2.color, colBrown2.rank), colBrown2.reqs),
+                renderAccordion('brown3', `3rd-degree Brown Belt (${colBrown3.rank})`, getBeltColorClass(colBrown3.color, colBrown3.rank), colBrown3.reqs),
+                renderAccordion('black', `Black Belt (${colShodan.rank})`, getBeltColorClass(colShodan.color, colShodan.rank), colShodan.reqs),
+                renderAccordion('shidoin', 'Shidoin (指導員) Title / Instructorship', 'bg-[#2e2e2e] text-white', {
+                    info: [
+                        "The character \"Shi\" (指) means \"to point\" or \"indicate\", and \"Do\" (導) means \"to lead\" or \"guide\", descriptive of instructors.",
+                        "An instructor is a black belt who actively teaches and participates in classes.",
+                        "Students and instructors may honor an instructor by calling them \"Master (Name)\", similar to \"Sensei\" in Japanese systems."
+                    ]
+                }),
+                renderDanRanksCombinedAccordion(parsedZmaCols),
+                renderAccordion('renshi', 'Renshi (錬士) Title / "Polished Expert"', 'bg-[#ffb3b3] text-black', {
+                    info: [
+                        "\"Ren\" (錬) implies \"polished\" or \"refined\", while \"Shi\" (士) translates to \"person\" / expert.",
+                        "Masters with the Renshi title may wear a decorative red and black paneled belt to events.",
+                        "The title is a formal suffix: \"(Name), Renshi\"."
+                    ],
+                    general: [
+                        "Has a student that is an instructor",
+                        "Minimum 5+ years of active instructorship",
+                        "Recognized by a kyoshi or lineage holder",
+                        "Can be awarded to masters at 4th Dan and above"
+                    ]
+                }),
+                renderAccordion('kyoshi', 'Kyoshi (教士) Title / "Experienced Teacher"', 'bg-[#ff8e8e] text-black', {
+                    info: [
+                        "\"Kyo\" (教) means \"teach\" or \"education\" (\"teaching expert\").",
+                        "Masters with the Kyoshi title may wear a decorative red and white paneled belt to events.",
+                        "The title is a formal suffix: \"(Name), Kyoshi\"."
+                    ],
+                    general: [
+                        "Has 3+ students that are instructors",
+                        "Minimum 10+ years of active instructorship",
+                        "Recognized by a hanshi or lineage holder",
+                        "Can be awarded to masters at 5th Dan and above"
+                    ]
+                }),
+                renderAccordion('hanshi', 'Hanshi (範士) Title / "Model Expert" / Grandmaster', 'bg-[#ff5151] text-black', {
+                    info: [
+                        "\"Han\" (範) denotes \"model\" or \"example\" (\"model expert\").",
+                        "Masters with the Hanshi title may wear a decorative red belt to events.",
+                        "Formal title written as \"(Name), Hanshi\", often addressed as Grandmaster."
+                    ],
+                    general: [
+                        "Has a student that holds the renshi title",
+                        "Minimum 20+ years of active instructorship",
+                        "Awarded by popular vote or lineage holder",
+                        "Can be awarded to masters at 7th Dan and above"
+                    ]
+                })
+            ];
+
+            // 3. Visitors Section
+            const visitorElements = [
+                renderAccordion('visitor', 'Visitor', 'bg-white text-black', {
+                    info: [
+                        "Zen Martial Arts openly accepts visitors from other martial arts systems.",
+                        "Visitors are welcome to wear their home school uniform as long as it is respectful and safe.",
+                        "Visitors are encouraged to participate and progress in the ZMA system if desired; instructors may offer worn symbolism to honor external accomplishments."
+                    ]
+                }),
+                renderAccordion('visiting-instructor', 'Visiting Instructor', 'bg-[#2e2e2e] text-white', {
+                    info: [
+                        "Visiting martial artists who are instructors or masters in their respective disciplines are recognized as Visiting Instructors.",
+                        "Honored formally during class as \"Mr./Mrs./Ms. (Name)\".",
+                        "Often invited to lead seminars and workshops in their areas of specialization."
+                    ]
+                })
+            ];
+
+            let html = `
+                <!-- Student Section -->
+                <section class="mb-12">
+                    <h2 class="text-2xl font-bold text-white uppercase border-b border-neutral-800 pb-2 mb-6 flex items-center justify-between">
+                        <span>${studentTitle}</span>
+                        <span class="text-xs tracking-widest text-accent border border-accent/40 px-2.5 py-0.5 rounded">White – 4th Kyū</span>
+                    </h2>
+                    <div class="space-y-3">
+                        ${studentBeltsHtml}
+                    </div>
+                </section>
+
+                <!-- Instructor Ranks Section -->
+                <section class="mb-12">
+                    <h2 class="text-2xl font-bold text-white uppercase border-b border-neutral-800 pb-2 mb-2 flex items-center justify-between">
+                        <span>Instructor Ranks</span>
+                        <span class="text-xs tracking-widest text-amber-400 border border-amber-400/40 px-2.5 py-0.5 rounded">3rd Kyū – Dan Ranks & Titles</span>
+                    </h2>
+                    <p class="text-neutral-400 text-xs sm:text-sm mb-6">Assistant instructorship, first-degree black belt certification, dan rank test material, and teaching titles.</p>
+                    <div class="space-y-3">
+                        ${instructorRankElements.join('')}
+                    </div>
+                </section>
+
+                <!-- Visitors Section -->
+                <section class="mb-12">
+                    <h2 class="text-2xl font-bold text-white uppercase border-b border-neutral-800 pb-2 mb-6">Visitors</h2>
+                    <div class="space-y-3">
+                        ${visitorElements.join('')}
+                    </div>
+                </section>
+            `;
 
             container.innerHTML = html;
         }
 
-        const labels = {
-            info: "Information", general: "General Requirements", paper: "Paper", form: "Form", defense: "Self Defense", 
-            strikes: "Strikes", blocks: "Blocks", kicks: "Kicks", stances: "Stances", sticks: "Sticks", staff: "Staff", 
-            knife: "Knife", sparring: "Sparring", wing_chun: "Wing Chun", jujitsu: "Judo / Jujitsu", breaking: "Breaking"
-        };
+        function buildRequirementsList(reqs, isRecommended = false) {
+            if (!reqs || Object.keys(reqs).length === 0) {
+                return '<p class="text-neutral-500 italic text-sm">No specific requirements listed.</p>';
+            }
 
-        function buildRequirementsList(reqs) {
-            let html = '<div class="space-y-6">';
-            
+            let html = '<div class="space-y-5">';
+            let hasContent = false;
+
             for (const [key, items] of Object.entries(reqs)) {
                 if (items && items.length > 0) {
+                    hasContent = true;
+                    let labelName = labels[key] || key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+                    if (isRecommended && key !== 'info' && key !== 'general') {
+                        labelName = `Recommended ${labelName} Material`;
+                    }
+
                     html += `
                         <div>
-                            <h4 class="text-accent font-bold uppercase tracking-wider text-sm mb-2"><i class="fas fa-caret-right mr-2"></i>${labels[key]}</h4>
+                            <h4 class="text-accent font-bold uppercase tracking-wider text-xs mb-2 flex items-center">
+                                <i class="fas fa-caret-right mr-2"></i>${labelName}
+                            </h4>
                             <ul class="list-disc list-inside text-neutral-400 space-y-1 ml-2 text-sm md:text-base">
                     `;
                     items.forEach(item => {
@@ -515,25 +802,26 @@
                     html += `</ul></div>`;
                 }
             }
-            
+
             html += '</div>';
-            return html === '<div class="space-y-6"></div>' ? '<p class="text-neutral-500 italic text-sm">No specific requirements listed.</p>' : html;
+            return hasContent ? html : '<p class="text-neutral-500 italic text-sm">No specific requirements listed.</p>';
         }
 
         function toggleReqs(id) {
             const reqContainer = document.getElementById(`reqs-${id}`);
             const icon = document.getElementById(`icon-${id}`);
+            if (!reqContainer) return;
             
             if (reqContainer.classList.contains('hidden')) {
                 reqContainer.classList.remove('hidden');
-                icon.style.transform = 'rotate(180deg)';
+                if (icon) icon.style.transform = 'rotate(180deg)';
             } else {
                 reqContainer.classList.add('hidden');
-                icon.style.transform = 'rotate(0deg)';
+                if (icon) icon.style.transform = 'rotate(0deg)';
             }
         }
 
-        document.addEventListener('DOMContentLoaded', renderCurriculum);
+        document.addEventListener('DOMContentLoaded', initCurriculum);
     </script>
 </body>
 </html>
