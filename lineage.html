@@ -152,7 +152,7 @@
             group: '#ccddaa'
         };
 
-        // Complete Node List with Strict Hierarchical Level Assignments
+        // Complete Node List
         const rawNodes = [
             { id: 'chinese', label: 'Chinese Gongfu', level: 0, color: colors.group, shape: 'box' },
             { id: 'japanese', label: 'Japanese Jujutsu', level: 0, color: colors.group, shape: 'box' },
@@ -736,6 +736,8 @@
 
         const container = document.getElementById('network-container');
         const data = { nodes: nodesDataSet, edges: edgesDataSet };
+        
+        // Configuration with ZERO Physics for Instant Static Layout
         const defaultOptions = {
             layout: {
                 hierarchical: {
@@ -750,16 +752,7 @@
                     parentCentralization: true
                 }
             },
-            physics: {
-                hierarchicalRepulsion: {
-                    centralGravity: 0.0,
-                    springLength: 140,
-                    springConstant: 0.01,
-                    nodeDistance: 310,
-                    damping: 0.09
-                },
-                solver: 'hierarchicalRepulsion'
-            },
+            physics: false, // Disables all continuous physics calculations and wiggles
             interaction: {
                 hover: true,
                 dragNodes: true,
@@ -912,6 +905,7 @@
             }
         });
 
+        // Dynamic reorganization without physics bounce
         function selectPerson(nodeId) {
             const targetNode = rawNodes.find(n => n.id === nodeId);
             if (!targetNode) return;
@@ -923,7 +917,7 @@
             document.getElementById('active-focus-name').textContent = getFirstLine(targetNode.label);
             badge.classList.remove('hidden');
 
-            // Find all ancestors and descendants
+            // 1. Gather all Ancestors and Descendants
             const ancestors = new Set();
             const queueUp = [nodeId];
             while (queueUp.length > 0) {
@@ -948,7 +942,7 @@
                 });
             }
 
-            // Assign relative levels
+            // 2. Compute relative level distances from the selected target (nodeId = level 0)
             const relativeLevels = {};
             relativeLevels[nodeId] = 0;
 
@@ -981,10 +975,9 @@
 
             const minRel = ancestorDistances.length ? Math.min(...ancestorDistances) : 0;
             const maxRel = descendantDistances.length ? Math.max(...descendantDistances) : 0;
-
             const targetLevel = rawNodes.find(n => n.id === nodeId).level;
 
-            // Preserve top-to-bottom order across unassociated nodes
+            // 3. Position unrelated nodes outside the focused lineage chain
             const rawUnconnectedLevels = {};
             rawNodes.forEach(n => {
                 if (n.id !== nodeId && !ancestors.has(n.id) && !descendants.has(n.id)) {
@@ -1006,7 +999,7 @@
                 finalLevels[n.id] = (allComputed[n.id] ?? 0) - minAll;
             });
 
-            // Enforce strictly top-to-bottom edge levels
+            // 4. Validate strict top-to-bottom edge level hierarchy
             let changed = true;
             while (changed) {
                 changed = false;
@@ -1018,6 +1011,7 @@
                 });
             }
 
+            // 5. Update DataSet & minimize edge intersections
             const updatedNodesList = rawNodes.map(n => formatNodeData(n, finalLevels[n.id]));
             const optimizedUpdatedNodes = optimizeLayerOrder(updatedNodesList, rawEdges);
 
@@ -1027,16 +1021,16 @@
             network.selectNodes([nodeId]);
             highlightLineage(nodeId);
 
-            // Wait for hierarchical layout stabilization before zooming with short duration
-            network.once('stabilized', () => {
+            // 6. Direct camera transition without waiting on physics
+            setTimeout(() => {
                 network.focus(nodeId, {
                     scale: 0.95,
-                    animation: { duration: 450, easingFunction: 'easeInOutQuad' }
+                    animation: { duration: 400, easingFunction: 'easeInOutQuad' }
                 });
-            });
+            }, 20);
         }
 
-        // Reset to original tree organization
+        // Reset to full view without physics delay
         function resetToOriginalGraph(focusCallback) {
             clearSearch();
             document.getElementById('active-focus-badge').classList.add('hidden');
@@ -1047,47 +1041,49 @@
             network.unselectAll();
 
             if (typeof focusCallback === 'function') {
-                network.once('stabilized', () => {
-                    focusCallback();
-                });
+                focusCallback();
             } else {
-                network.once('stabilized', () => {
-                    network.fit({ animation: { duration: 450, easingFunction: 'easeInOutQuad' } });
-                });
+                network.fit({ animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
             }
         }
 
-        // Focus Handlers
-        function zoomToZMAINW(animate = true) {
+        // Streamlined Focus Handlers
+        function zoomToZMAINW() {
             resetToOriginalGraph(() => {
                 const directStudents = (outgoingMap['diloreto'] || []).map(e => e.to);
                 const targetNodes = ['diloreto', ...directStudents];
-                network.fit({
-                    nodes: targetNodes,
-                    animation: animate ? { duration: 450, easingFunction: 'easeInOutQuad' } : false
-                });
-                network.selectNodes(['diloreto']);
-                highlightLineage('diloreto');
+                
+                // Allow microtask tick for DOM/view recalculation
+                setTimeout(() => {
+                    network.fit({
+                        nodes: targetNodes,
+                        animation: { duration: 400, easingFunction: 'easeInOutQuad' }
+                    });
+                    network.selectNodes(['diloreto']);
+                    highlightLineage('diloreto');
+                }, 10);
             });
         }
 
-        function zoomToZMA(animate = true) {
+        function zoomToZMA() {
             resetToOriginalGraph(() => {
                 const zmaNodeIds = rawNodes
                     .filter(n => n.label && n.label.toUpperCase().includes('ZMA'))
                     .map(n => n.id);
 
                 if (zmaNodeIds.length > 0) {
-                    network.fit({
-                        nodes: zmaNodeIds,
-                        animation: animate ? { duration: 450, easingFunction: 'easeInOutQuad' } : false
-                    });
+                    setTimeout(() => {
+                        network.fit({
+                            nodes: zmaNodeIds,
+                            animation: { duration: 400, easingFunction: 'easeInOutQuad' }
+                        });
+                    }, 10);
                 }
             });
         }
 
-        // Default Load Behavior
-        network.once('stabilized', () => {
+        // Instant Initial Fit on page load (zero delay / zero physics bounce)
+        requestAnimationFrame(() => {
             const directStudents = (outgoingMap['diloreto'] || []).map(e => e.to);
             const targetNodes = ['diloreto', ...directStudents];
             network.fit({
