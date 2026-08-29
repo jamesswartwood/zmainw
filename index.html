@@ -12,9 +12,25 @@
     <title>Zen Martial Arts International NW (ZMAINW)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Keyless In-Browser AI Engine -->
+    <script src="https://js.puter.com/v2/"></script>
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
     <!-- Cache-busted stylesheet link (v=timestamp) -->
     <link rel="stylesheet" href="styles.css?v=20260827_1">
+
+    <style>
+        /* Markdown chat bubble styling */
+        .chat-markdown p { margin-bottom: 0.5rem; }
+        .chat-markdown p:last-child { margin-bottom: 0; }
+        .chat-markdown ul { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+        .chat-markdown ol { list-style-type: decimal; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+        .chat-markdown li { margin-bottom: 0.25rem; }
+        .chat-markdown strong { color: #fff; font-weight: 700; }
+        .chat-markdown a { color: #38bdf8; text-decoration: underline; }
+        .chat-markdown code { background-color: #000; padding: 0.15rem 0.35rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.85em; }
+    </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
 
@@ -88,18 +104,48 @@
         </main>
     </div>
 
-    <!-- Fixed Bottom Banner -->
-    <!--
-    <div class="fixed bottom-0 left-0 right-0 bg-amber-500 text-neutral-950 text-center py-2 px-4 text-xs md:text-sm font-bold uppercase tracking-widest z-50 shadow-2xl flex items-center justify-center gap-2 border-t border-amber-400">
-        <i class="fas fa-tools text-sm"></i>
-        <span>Website under development</span>
+    <!-- Floating Chatbot Widget -->
+    <div id="chat-widget" class="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+        <!-- Chat Window -->
+        <div id="chat-window" class="hidden flex-col w-80 sm:w-96 h-[480px] bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl overflow-hidden mb-3">
+            <!-- Header -->
+            <div class="bg-black p-4 border-b border-neutral-800 flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                    <span class="font-bold text-sm text-white tracking-wide uppercase">ZMAINW Assistant</span>
+                </div>
+                <button onclick="toggleChat()" class="text-neutral-400 hover:text-white text-lg focus:outline-none">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Message History -->
+            <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3 text-sm text-neutral-200">
+                <div class="bg-neutral-800 p-3 rounded-lg max-w-[85%] border border-neutral-700">
+                    Hi! Ask me anything about our classes, schedules, ranks, or instructors.
+                </div>
+            </div>
+
+            <!-- Input Box -->
+            <div class="p-3 bg-black border-t border-neutral-800 flex gap-2">
+                <input id="chat-input" type="text" placeholder="Ask a question..." 
+                       class="flex-1 bg-neutral-900 border border-neutral-700 text-white text-sm rounded px-3 py-2 focus:outline-none focus:border-accent"
+                       onkeydown="if(event.key === 'Enter') sendChatMessage()">
+                <button onclick="sendChatMessage()" class="bg-accent hover:opacity-90 text-white px-3 py-2 rounded text-sm font-bold transition-opacity">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Floating Toggle Button -->
+        <button onclick="toggleChat()" class="bg-accent text-white p-4 rounded-full shadow-2xl hover:scale-105 transition-transform flex items-center justify-center w-14 h-14 focus:outline-none">
+            <i class="fas fa-comment-dots text-xl"></i>
+        </button>
     </div>
-    -->
 
     <!-- Application Logic -->
     <script>
         const topNavLinksConfig = [
-            { type: 'link', label: 'Old Website', icon: 'fa-external-link-alt', url: 'https://www.zmaseattle.com/' },    
             { type: 'protected', label: 'Class Schedule', icon: 'fa-lock', target: 'schedule' },
             { type: 'protected', label: 'Curriculum', icon: 'fa-lock', target: 'curriculum' },
             { type: 'protected', label: 'Lineage', icon: 'fa-lock', target: 'lineage' },
@@ -478,6 +524,94 @@
         }
 
         document.getElementById('mobile-menu-btn').addEventListener('click', toggleMobileMenu);
+
+        // --- Chatbot Logic ---
+        function getSiteKnowledgeBase() {
+            return Object.entries(views)
+                .map(([section, html]) => {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html;
+                    return `--- SECTION: ${section.toUpperCase()} ---\n${tempDiv.textContent.replace(/\s+/g, ' ').trim()}`;
+                })
+                .join('\n\n');
+        }
+
+        function toggleChat() {
+            const chat = document.getElementById('chat-window');
+            chat.classList.toggle('hidden');
+            chat.classList.toggle('flex');
+            if (chat.classList.contains('flex')) {
+                document.getElementById('chat-input').focus();
+            }
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const container = document.getElementById('chat-messages');
+            const query = input.value.trim();
+            if (!query) return;
+
+            // Render User Bubble
+            input.value = '';
+            container.innerHTML += `
+                <div class="flex justify-end">
+                    <div class="bg-accent text-white p-3 rounded-lg max-w-[85%] text-right shadow">${query}</div>
+                </div>`;
+            
+            // Render Loading Indicator
+            const loadingId = 'loading-' + Date.now();
+            container.innerHTML += `
+                <div id="${loadingId}" class="bg-neutral-800 text-neutral-400 p-3 rounded-lg max-w-[85%] border border-neutral-700 italic flex items-center gap-2">
+                    <i class="fas fa-circle-notch fa-spin text-accent"></i> Thinking...
+                </div>`;
+            container.scrollTop = container.scrollHeight;
+
+            // Formulate Strict RAG Prompt
+            const context = getSiteKnowledgeBase();
+            const systemPrompt = `
+You are the official assistant for Zen Martial Arts International NW (ZMAINW).
+Answer the visitor's question using ONLY the provided website context below.
+
+WEBSITE CONTEXT:
+${context}
+
+STRICT GUIDELINES:
+1. If the answer cannot be explicitly derived from the context above, clearly state that you do not have that specific information and invite them to reach out via our Contact Us form.
+2. Keep responses brief, polite, and encouraging.
+3. Format output cleanly with standard Markdown (e.g. bolding, bullet points).
+4. Never invent facts, prices, ranks, schedules, or locations.
+`;
+
+            try {
+                const response = await puter.ai.chat(
+                    `${systemPrompt}\n\nUSER QUESTION: ${query}`
+                );
+                
+                const loader = document.getElementById(loadingId);
+                if (loader) loader.remove();
+
+                const rawText = response.message ? response.message.content : response;
+                
+                // Parse markdown into sanitized HTML
+                const parsedHtml = marked.parse(rawText);
+
+                container.innerHTML += `
+                    <div class="bg-neutral-800 p-3 rounded-lg max-w-[85%] border border-neutral-700 text-neutral-200 chat-markdown">
+                        ${parsedHtml}
+                    </div>`;
+            } catch (err) {
+                const loader = document.getElementById(loadingId);
+                if (loader) loader.remove();
+
+                container.innerHTML += `
+                    <div class="bg-red-950/40 border border-red-800 text-red-300 p-3 rounded-lg max-w-[85%]">
+                        Sorry, I'm having trouble answering right now. Please head over to our 
+                        <button onclick="navigateTo('contact')" class="underline font-bold text-white">Contact Us</button> page!
+                    </div>`;
+            }
+
+            container.scrollTop = container.scrollHeight;
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             renderExternalLinks();
